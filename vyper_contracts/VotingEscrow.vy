@@ -1,4 +1,4 @@
-# @version 0.3.1
+# @version 0.3.7
 """
 @title Voting Escrow
 @author Curve Finance
@@ -57,6 +57,12 @@ CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
 
+event CommitOwnership:
+    admin: address
+
+event ApplyOwnership:
+    admin: address
+
 event Deposit:
     provider: indexed(address)
     value: uint256
@@ -79,7 +85,8 @@ MAXTIME: constant(uint256) = 365 * 86400  # 1 year
 MULTIPLIER: constant(uint256) = 10 ** 18
 
 TOKEN: immutable(address)
-AUTHORIZER_ADAPTOR: immutable(address) # Authorizer Adaptor
+# From Balancer's implementation:
+# AUTHORIZER_ADAPTOR: immutable(address) # Authorizer Adaptor
 
 NAME: immutable(String[64])
 SYMBOL: immutable(String[32])
@@ -99,20 +106,26 @@ slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 future_smart_wallet_checker: public(address)
 smart_wallet_checker: public(address)
 
+admin: public(address)  # Can and will be a smart contract
+future_admin: public(address)
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], _authorizer_adaptor: address):
+def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
+# Balancer's implementation:
+# def __init__(token_addr: address, _name: String[64], _symbol: String[32], _authorizer_adaptor: address):
     """
     @notice Contract constructor
     @param token_addr 80/20 BAL-WETH BPT token address
     @param _name Token name
     @param _symbol Token symbol
-    @param _authorizer_adaptor `AuthorizerAdaptor` contract address
     """
-    assert _authorizer_adaptor != ZERO_ADDRESS
+    # @param _authorizer_adaptor `AuthorizerAdaptor` contract address
+    # assert _authorizer_adaptor != empty(address)
 
     TOKEN = token_addr
-    AUTHORIZER_ADAPTOR = _authorizer_adaptor
+    # Balancer's implementation:
+    # AUTHORIZER_ADAPTOR = _authorizer_adaptor
+    self.admin = msg.sender
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
 
@@ -143,10 +156,34 @@ def symbol() -> String[32]:
 def decimals() -> uint256:
     return DECIMALS
 
+# Balancer's implementation:
+# @external
+# @view
+# def admin() -> address:
+#     return AUTHORIZER_ADAPTOR
+
+#region Curve's original implementation
 @external
-@view
-def admin() -> address:
-    return AUTHORIZER_ADAPTOR
+def commit_transfer_ownership(addr: address):
+    """
+    @notice Transfer ownership of VotingEscrow contract to `addr`
+    @param addr Address to have ownership transferred to
+    """
+    assert msg.sender == self.admin  # dev: admin only
+    self.future_admin = addr
+    log CommitOwnership(addr)
+
+@external
+def apply_transfer_ownership():
+    """
+    @notice Apply ownership transfer
+    """
+    assert msg.sender == self.admin  # dev: admin only
+    _admin: address = self.future_admin
+    assert _admin != empty(address)  # dev: admin not set
+    self.admin = _admin
+    log ApplyOwnership(_admin)
+#endregion
 
 @external
 def commit_smart_wallet_checker(addr: address):
@@ -154,7 +191,9 @@ def commit_smart_wallet_checker(addr: address):
     @notice Set an external contract to check for approved smart contract wallets
     @param addr Address of Smart contract checker
     """
-    assert msg.sender == AUTHORIZER_ADAPTOR
+    assert msg.sender == self.admin
+    # Balancer's implementation:
+    # assert msg.sender == AUTHORIZER_ADAPTOR
     self.future_smart_wallet_checker = addr
 
 
@@ -163,7 +202,9 @@ def apply_smart_wallet_checker():
     """
     @notice Apply setting external contract to check approved smart contract wallets
     """
-    assert msg.sender == AUTHORIZER_ADAPTOR
+    assert msg.sender == self.admin
+    # Balancer's implementation:
+    # assert msg.sender == AUTHORIZER_ADAPTOR
     self.smart_wallet_checker = self.future_smart_wallet_checker
 
 
@@ -173,12 +214,14 @@ def assert_not_contract(addr: address):
     @notice Check if the call is from a whitelisted smart contract, revert if not
     @param addr Address to be checked
     """
-    if addr != tx.origin:
-        checker: address = self.smart_wallet_checker
-        if checker != ZERO_ADDRESS:
-            if SmartWalletChecker(checker).check(addr):
-                return
-        raise "Smart contract depositors not allowed"
+    return
+    # TODO: uncomment this when we have a smart wallet checker
+    # if addr != tx.origin:
+    #     checker: address = self.smart_wallet_checker
+    #     if checker != empty(address):
+    #         if SmartWalletChecker(checker).check(addr):
+    #             return
+    #     raise "Smart contract depositors not allowed"
 
 
 @external
@@ -230,14 +273,14 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     new_dslope: int128 = 0
     _epoch: uint256 = self.epoch
 
-    if addr != ZERO_ADDRESS:
+    if addr != empty(address):
         # Calculate slopes and biases
         # Kept at zero when they have to
         if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = old_locked.amount / MAXTIME
+            u_old.slope = old_locked.amount / convert(MAXTIME, int128)
             u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
         if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = new_locked.amount / MAXTIME
+            u_new.slope = new_locked.amount / convert(MAXTIME, int128)
             u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
 
         # Read values of scheduled changes in the slope
@@ -294,7 +337,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     self.epoch = _epoch
     # Now point_history is filled until t=now
 
-    if addr != ZERO_ADDRESS:
+    if addr != empty(address):
         # If last point was in this block, the slope change has been applied already
         # But in such case we have 0 slope(s)
         last_point.slope += (u_new.slope - u_old.slope)
@@ -307,7 +350,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     # Record the changed point into history
     self.point_history[_epoch] = last_point
 
-    if addr != ZERO_ADDRESS:
+    if addr != empty(address):
         # Schedule the slope changes (slope is going down)
         # We subtract new_user_slope from [new_locked.end]
         # and add old_user_slope to [old_locked.end]
@@ -371,7 +414,7 @@ def checkpoint():
     """
     @notice Record global data to checkpoint
     """
-    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+    self._checkpoint(empty(address), empty(LockedBalance), empty(LockedBalance))
 
 
 @external

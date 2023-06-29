@@ -12,25 +12,72 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// From https://github.com/balancer/balancer-v2-monorepo/blob/c4cc3d466eaa3c1e5fa62d303208c6c4a10db48a/pkg/interfaces/contracts/liquidity-mining/IOmniVotingEscrow.sol
-
 pragma solidity >=0.7.0 <0.9.0;
+pragma experimental ABIEncoderV2;
 
-/**
- * @dev Partial voting escrow bridge interface.
- * See https://github.com/LayerZero-Labs/lz_gauges/blob/main/contracts/OmniVotingEscrow.sol for reference.
- */
-interface IOmniVotingEscrow {
-    function estimateSendUserBalance(uint16 _dstChainId, bool _useZro, bytes calldata _adapterParams)
-        external
-        view
-        returns (uint256 nativeFee, uint256 zroFee);
+// import "./IAuthorizerAdaptor.sol";
+import "./ISmartWalletChecker.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
-    function sendUserBalance(
-        address _user,
-        uint16 _dstChainId,
-        address payable _refundAddress,
-        address _zroPaymentAddress,
-        bytes memory _adapterParams
-    ) external payable;
+// For compatibility, we're keeping the same function names as in the original Curve code, including the mixed-case
+// naming convention.
+// solhint-disable func-name-mixedcase
+
+interface IVotingEscrow is IERC20 {
+    struct Point {
+        int128 bias;
+        int128 slope; // - dweight / dt
+        uint256 ts;
+        uint256 blk; // block
+    }
+
+    function epoch() external view returns (uint256);
+
+    // function admin() external view returns (IAuthorizerAdaptor);
+    function admin() external view returns (address);
+    // function apply_smart_wallet_checker() external;
+    function apply_smart_wallet_checker() external;
+    function apply_transfer_ownership() external;
+    // function balanceOf(address addr, uint256 _t) external view returns (uint256);
+    function balanceOf(address user, uint256 timestamp) external view returns (uint256);
+    function balanceOfAt(address addr, uint256 _block) external view returns (uint256);
+    // function checkpoint() external;
+    function checkpoint() external;
+    // function commit_smart_wallet_checker(address addr) external;
+    function commit_smart_wallet_checker(address newSmartWalletChecker) external;
+    function commit_transfer_ownership(address addr) external;
+    function create_lock(uint256 _value, uint256 _unlock_time) external;
+    function decimals() external view returns (uint256);
+    function deposit_for(address _addr, uint256 _value) external;
+    function get_last_user_slope(address addr) external view returns (int128);
+    function increase_amount(uint256 _value) external;
+    function increase_unlock_time(uint256 _unlock_time) external;
+    // function locked__end(address _addr) external view returns (uint256);
+    function locked__end(address user) external view returns (uint256);
+    function name() external view returns (string memory);
+    function point_history(uint256 timestamp) external view returns (Point memory);
+    function smart_wallet_checker() external view returns (ISmartWalletChecker);
+    function symbol() external view returns (string memory);
+    function token() external view returns (address);
+    // function totalSupply(uint256 t) external view returns (uint256);
+    function totalSupply(uint256 timestamp) external view returns (uint256);
+    function totalSupplyAt(uint256 _block) external view returns (uint256);
+    function user_point_epoch(address user) external view returns (uint256);
+    function user_point_history__ts(address _addr, uint256 _idx) external view returns (uint256);
+    function user_point_history(address user, uint256 timestamp) external view returns (Point memory);
+    function withdraw() external;
 }
+
+// pragma solidity >=0.6.0 <0.9.0;
+
+// interface IERC20 {
+//     function decimals() external view returns (uint256);
+//     function name() external view returns (string memory);
+//     function symbol() external view returns (string memory);
+//     function transfer(address to, uint256 amount) external returns (bool);
+//     function transferFrom(address spender, address to, uint256 amount) external returns (bool);
+// }
+
+// interface ISmartWalletChecker {
+//     function check(address addr) external returns (bool);
+// }
