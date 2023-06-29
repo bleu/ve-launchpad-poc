@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "ve-launchpad"
+version = "0.1.0"
+description = ""
+authors = ["José Ribeiro <jose@bleu.studio>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+# For some reason vyper doesn't work on MacOS after 0.3.7 and Python > 3.9
+vyper = "^0.3.7"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
