@@ -49,21 +49,28 @@ contract veLaunchPadE2E is Test, HelperContract {
     }
 
     function testCreateLock() public {
+        uint256 amount = 1e18;
+        uint256 year = 365 * 86400;
         require(votingEscrow.totalSupply() == 0);
         require(token.balanceOf(address(this)) == 0);
         require(token.totalSupply() == 0);
+        require(votingEscrow.epoch() == 0);
 
-        token.mint(address(this), 100);
-        token.approve(address(votingEscrow), 100);
+        token.mint(address(this), amount);
+        token.approve(address(votingEscrow), amount);
+        require(token.balanceOf(address(this)) == amount);
 
-        votingEscrow.create_lock(100, block.timestamp + 365 * 86400);
+        votingEscrow.create_lock(amount, block.timestamp + year);
+        require(token.balanceOf(address(this)) == 0);
+        require(votingEscrow.epoch()==1);
+        require(votingEscrow.supply() == amount);
 
-        console.log(votingEscrow.totalSupply());
-        console.log(votingEscrow.balanceOf(address(this)));
-        console.log(votingEscrow.balanceOf(address(this), block.timestamp + 365 * 86400));
 
-        require(votingEscrow.totalSupply() == 100);
+        require(votingEscrow.totalSupply() > 0);
+        require(votingEscrow.totalSupply(block.timestamp + year) == 0);
     }
+
+
 
     // function testIncreaseLockAmount() public {
     //     token.mint(address(this), 100);
