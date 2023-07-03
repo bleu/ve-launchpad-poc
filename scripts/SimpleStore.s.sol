@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "forge-std/Script.sol";
-import "../../utils/VyperDeployer.sol";
+import "../utils/VyperDeployer.sol";
 
 contract Deploy is Script {
     function run() external {
