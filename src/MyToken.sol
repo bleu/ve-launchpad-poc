@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity >=0.7.0;
 
-import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "../lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/openzeppelin/ERC20.sol";
 
 contract MyToken is ERC20 {
     constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}

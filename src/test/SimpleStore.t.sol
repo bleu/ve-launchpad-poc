@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.13;
+pragma solidity ^0.7.0;
+pragma abicoder v2;
 
 import "forge-std/Test.sol";
 
@@ -8,7 +9,6 @@ import "../../utils/VyperDeployer.sol";
 import "../../src/ISimpleStore.sol";
 
 contract SimpleStoreTest is Test {
-    ///@notice create a new instance of VyperDeployer
     VyperDeployer vyperDeployer = new VyperDeployer();
 
     ISimpleStore simpleStore;
@@ -16,7 +16,6 @@ contract SimpleStoreTest is Test {
     ISimpleStoreFactory simpleStoreFactory;
 
     function setUp() public {
-        ///@notice deploy a new instance of ISimplestore by passing in the address of the deployed Vyper contract
         simpleStore = ISimpleStore(vyperDeployer.deployContract("SimpleStore", abi.encode(1234)));
 
         simpleStoreBlueprint = ISimpleStore(vyperDeployer.deployBlueprint("ExampleBlueprint"));

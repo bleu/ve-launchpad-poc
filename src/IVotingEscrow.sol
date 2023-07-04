@@ -17,7 +17,7 @@ pragma experimental ABIEncoderV2;
 
 // import "./IAuthorizerAdaptor.sol";
 import "./ISmartWalletChecker.sol";
-import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
 
 // For compatibility, we're keeping the same function names as in the original Curve code, including the mixed-case
 // naming convention.

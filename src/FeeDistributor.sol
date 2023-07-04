@@ -12,20 +12,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-// BLEU
-import "./IAuthentication.sol";
-import "../utils/OptionalOnlyCaller.sol";
-import "../utils/InputHelpers.sol";
-// import "../utils/Math.sol";
-import "../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
-import "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./IFeeDistributor.sol";
-import "./IVotingEscrow.sol";
+import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/IAuthentication.sol";
+import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/IFeeDistributor.sol";
+import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ReentrancyGuard.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/OptionalOnlyCaller.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeMath.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 
 // solhint-disable not-rely-on-time
 
@@ -521,9 +520,9 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
                     break;
                 }
 
-                int128 dt = int128(uint128(nextWeekToCheckpoint - currentUserPoint.ts));
+                int128 dt = int128(nextWeekToCheckpoint - currentUserPoint.ts);
                 uint256 userBalance = currentUserPoint.bias > currentUserPoint.slope * dt
-                    ? uint256(int256(currentUserPoint.bias - currentUserPoint.slope * dt))
+                    ? uint256(currentUserPoint.bias - currentUserPoint.slope * dt)
                     : 0;
 
                 // User's lock has expired and they haven't relocked yet.

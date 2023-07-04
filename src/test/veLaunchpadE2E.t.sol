@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.13;
+pragma solidity ^0.7.0;
 
 import "forge-std/Test.sol";
 
@@ -8,6 +8,7 @@ import "../../utils/VyperDeployer.sol";
 import "../IVotingEscrow.sol";
 import "../MyToken.sol";
 import "../FeeDistributor.sol";
+import "../../lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 
 abstract contract HelperContract {
     VyperDeployer vyperDeployer = new VyperDeployer();
