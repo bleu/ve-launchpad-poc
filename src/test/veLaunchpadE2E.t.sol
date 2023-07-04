@@ -135,24 +135,41 @@ contract veLaunchPadE2E is Test, HelperContract {
     }
 
     function testE2E() public {
-        // Deploy 2 ERC20 -> BAL, WETH;
+        // Deploy 2 ERC20 -> BAL, WETH on initialization;
+        // Deploy Voting Escrow on initialization;
+        // Deploy FeeDistributor on initialization;
+
+        // Declare 2 users;
+        address alice = address(1);
+        address bob = address(2);
+
         // Mint 1000 BAL, 1000 WETH;
+        token.mint(address(this), 1000e18);
+        weth.mint(address(this), 1000e18);
+
         // Deploy Weighted Pool factory;
         // Deploy 80/20 Pool;
-        // Deploy Voting Escrow;
-        // Deploy FeeDistributor;
 
         // Mint 100 BAL to A;
+        token.mint(alice, 100e18);
         // User A to join pool with 100 BAL;
         // User A to lock pool BPT in Voting Escrow;
 
         // Mint 200 BAL to B;
+        token.mint(bob, 200e18);
         // User B to join pool with 200 BAL;
         // User B to lock pool BPT in Voting Escrow;
 
         // Admin deposits 90 BAL in FeeDistributor;
+        token.approve(address(feeDistributor), 90e18);
+
+        vm.warp(604801);
+        feeDistributor.depositToken(token, 90e18);
 
         // User A claims 30 BAL from FeeDistributor;
+        feeDistributor.claimToken(alice, token);
+
         // User B claims 60 BAL from FeeDistributor;
+        feeDistributor.claimToken(bob, token);
     }
 }
