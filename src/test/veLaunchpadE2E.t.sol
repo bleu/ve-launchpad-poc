@@ -152,6 +152,40 @@ contract veLaunchPadE2E is Test, HelperContract {
         require(token.balanceOf(address(this)) == 9e18);
     }
 
+    function testPoolFactory() public {
+        IERC20[] memory tokens = new IERC20[](2);
+        tokens[0] = IERC20(token);
+        tokens[1] = IERC20(weth);
+
+        uint256[] memory weights = new uint256[](2);
+        weights[0] = 20e16;
+        weights[1] = 80e16;
+
+        IRateProvider[] memory rateProviders = new IRateProvider[](2);
+        rateProviders[0] = new MockRateProvider();
+        rateProviders[1] = new MockRateProvider();
+
+        bytes32 salt = bytes32(0);
+        address weightedPoolAddress = weightedPoolFactory.create(
+            "Test Pool",
+            "TEST",
+            tokens,
+            weights,
+            rateProviders,
+            1e12,
+            address(this),
+            salt
+        );
+
+        WeightedPool weightedPool = WeightedPool(weightedPoolAddress);
+
+        require(keccak256(abi.encodePacked(weightedPool.name())) == keccak256(abi.encodePacked("Test Pool")));
+        require(keccak256(abi.encodePacked(weightedPool.symbol())) == keccak256(abi.encodePacked("TEST")));
+        require(weightedPool.getOwner() == address(this));
+        require(weightedPool.totalSupply() == 0);
+
+    }
+
     function testE2E() public {
         // Deploy 2 ERC20 -> BAL, WETH on initialization;
         // Deploy Voting Escrow on initialization;
