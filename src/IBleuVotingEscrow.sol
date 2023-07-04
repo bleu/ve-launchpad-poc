@@ -16,14 +16,14 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 // import "./IAuthorizerAdaptor.sol";
-import "./ISmartWalletChecker.sol";
+import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/ISmartWalletChecker.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
 
 // For compatibility, we're keeping the same function names as in the original Curve code, including the mixed-case
 // naming convention.
 // solhint-disable func-name-mixedcase
 
-interface IVotingEscrow is IERC20 {
+interface IBleuVotingEscrow is IERC20 {
     struct Point {
         int128 bias;
         int128 slope; // - dweight / dt

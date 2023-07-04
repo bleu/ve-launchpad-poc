@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
+pragma abicoder v2;
 
 import "forge-std/Test.sol";
 
 import "../../utils/VyperDeployer.sol";
 
-import "../IVotingEscrow.sol";
 import "../MyToken.sol";
-import "../FeeDistributor.sol";
+import "../RewardDistributor.sol";
+import "../IBleuVotingEscrow.sol";
 import "../../lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 
 abstract contract HelperContract {
@@ -15,19 +16,19 @@ abstract contract HelperContract {
 
     MyToken token;
     MyToken weth;
-    FeeDistributor feeDistributor;
+    RewardDistributor rewardDistributor;
 
-    IVotingEscrow votingEscrow;
+    IBleuVotingEscrow votingEscrow;
 
     constructor() {
         token = new MyToken("Voting Escrowed Test Token","veTEST");
         weth = new MyToken("Wrapped ETH","WETH");
 
-        votingEscrow = IVotingEscrow(
+        votingEscrow = IBleuVotingEscrow(
             vyperDeployer.deployContract("VotingEscrow", abi.encode(token, "Voting Escrowed Test Token", "veTEST"))
         );
 
-        feeDistributor = new FeeDistributor(votingEscrow, 604800);
+        rewardDistributor = new RewardDistributor(votingEscrow, 604800);
     }
 }
 
@@ -108,36 +109,36 @@ contract veLaunchPadE2E is Test, HelperContract {
         require(votingEscrow.totalSupply() > 0);
         require(votingEscrow.totalSupply(block.timestamp + year) == 0);
 
-        require(feeDistributor.getVotingEscrow() == votingEscrow);
+        require(rewardDistributor.getVotingEscrow() == votingEscrow);
 
         vm.warp(604801);
 
-        token.approve(address(feeDistributor), 2e18);
-        feeDistributor.depositToken(token, 2e18);
-        require(feeDistributor.getTokenLastBalance(token) == 2e18);
+        token.approve(address(rewardDistributor), 2e18);
+        rewardDistributor.depositToken(token, 2e18);
+        require(rewardDistributor.getTokenLastBalance(token) == 2e18);
 
-        // require(feeDistributor.getTotalSupplyAtTimestamp(604800) == votingEscrow.totalSupply(604800));
-        require(feeDistributor.getUserTokenTimeCursor(address(this), token) == 604800);
+        // require(rewardDistributor.getTotalSupplyAtTimestamp(604800) == votingEscrow.totalSupply(604800));
+        require(rewardDistributor.getUserTokenTimeCursor(address(this), token) == 604800);
 
-        feeDistributor.checkpoint();
-        feeDistributor.checkpointUser(address(this));
-        feeDistributor.checkpointToken(token);
+        rewardDistributor.checkpoint();
+        rewardDistributor.checkpointUser(address(this));
+        rewardDistributor.checkpointToken(token);
 
         vm.warp(604802);
 
-        require(feeDistributor.getUserBalanceAtTimestamp(address(this), 604800) == 978082191757238400);
-        require(feeDistributor.getTotalSupplyAtTimestamp(604800) == 978082191757238400);
+        require(rewardDistributor.getUserBalanceAtTimestamp(address(this), 604800) == 978082191757238400);
+        require(rewardDistributor.getTotalSupplyAtTimestamp(604800) == 978082191757238400);
 
         vm.warp(604800 * 2);
 
-        feeDistributor.claimToken(address(this), token);
+        rewardDistributor.claimToken(address(this), token);
         require(token.balanceOf(address(this)) == 9e18);
     }
 
     function testE2E() public {
         // Deploy 2 ERC20 -> BAL, WETH on initialization;
         // Deploy Voting Escrow on initialization;
-        // Deploy FeeDistributor on initialization;
+        // Deploy RewardDistributor on initialization;
 
         // Declare 2 users;
         address alice = address(1);
@@ -160,16 +161,16 @@ contract veLaunchPadE2E is Test, HelperContract {
         // User B to join pool with 200 BAL;
         // User B to lock pool BPT in Voting Escrow;
 
-        // Admin deposits 90 BAL in FeeDistributor;
-        token.approve(address(feeDistributor), 90e18);
+        // Admin deposits 90 BAL in RewardDistributor;
+        token.approve(address(rewardDistributor), 90e18);
 
         vm.warp(604801);
-        feeDistributor.depositToken(token, 90e18);
+        rewardDistributor.depositToken(token, 90e18);
 
-        // User A claims 30 BAL from FeeDistributor;
-        feeDistributor.claimToken(alice, token);
+        // User A claims 30 BAL from RewardDistributor;
+        rewardDistributor.claimToken(alice, token);
 
-        // User B claims 60 BAL from FeeDistributor;
-        feeDistributor.claimToken(bob, token);
+        // User B claims 60 BAL from RewardDistributor;
+        rewardDistributor.claimToken(bob, token);
     }
 }

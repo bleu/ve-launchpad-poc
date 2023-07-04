@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.7.6;
 
 import "../utils/VyperDeployer.sol";
 
-import "./IVeSystemFactory.sol";
-import "./IVotingEscrow.sol";
-import "./FeeDistributor.sol";
+import "./RewardDistributor.sol";
+import "./IBleuVotingEscrow.sol";
 
-contract VeSystemFactory is IVeSystemFactory {
+contract VeSystemFactory {
     VyperDeployer _vyperDeployer = new VyperDeployer();
 
     address public owner;
-    FeeDistributor public feeDistributor;
-    IVotingEscrow public votingEscrow;
+    RewardDistributor public rewardDistributor;
+    IBleuVotingEscrow public votingEscrow;
 
     constructor() {
         owner = msg.sender;
@@ -20,15 +19,15 @@ contract VeSystemFactory is IVeSystemFactory {
 
     function deploy(address token, string memory tokenName, string memory tokenSymbol) external virtual {
         _deployVe(token, tokenName, tokenSymbol);
-        _deployRewardDistributor();
+        _deployRewardDistributor(604800);
     }
 
     function _deployVe(address token, string memory tokenName, string memory tokenSymbol) internal virtual {
         votingEscrow =
-            IVotingEscrow(_vyperDeployer.deployContract("VotingEscrow", abi.encode(token, tokenName, tokenSymbol)));
+            IBleuVotingEscrow(_vyperDeployer.deployContract("VotingEscrow", abi.encode(token, tokenName, tokenSymbol)));
     }
 
     function _deployRewardDistributor(uint256 startTime) internal virtual {
-        feeDistributor = new FeeDistributor(votingEscrow, startTime);
+        rewardDistributor = new RewardDistributor(votingEscrow, startTime);
     }
 }

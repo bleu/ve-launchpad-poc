@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.13;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "forge-std/Test.sol";
 
 import "../../utils/VyperDeployer.sol";
 
-import "../IVotingEscrow.sol";
+import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 import "../MyToken.sol";
-import "../FeeDistributor.sol";
+import "../RewardDistributor.sol";
 import "../VeSystemFactory.sol";
 
 contract VeSystemLauncherTest is Test {
@@ -19,7 +20,7 @@ contract VeSystemLauncherTest is Test {
         _veSystemFactory = new VeSystemFactory();
     }
 
-    function testGetOwner() public view {
-        assertEq(_veSystemFactory.owner, address(this));
+    function testGetOwner() public {
+        assertEq(_veSystemFactory.owner(), address(this));
     }
 }

@@ -16,9 +16,9 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/IAuthentication.sol";
-import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/IFeeDistributor.sol";
-import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
+import "./IBleuVotingEscrow.sol";
+import "./IRewardDistributor.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ReentrancyGuard.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/OptionalOnlyCaller.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
@@ -35,11 +35,11 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
  * @dev Supports distributing arbitrarily many different tokens. In order to start distributing a new token to veBAL
  * holders simply transfer the tokens to the `FeeDistributor` contract and then call `checkpointToken`.
  */
-contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard {
+contract RewardDistributor is IRewardDistributor, OptionalOnlyCaller, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IVotingEscrow private immutable _votingEscrow;
+    IBleuVotingEscrow private immutable _votingEscrow;
 
     uint256 private immutable _startTime;
 
@@ -58,6 +58,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
         uint64 timeCursor;
         uint128 cachedBalance;
     }
+
     mapping(IERC20 => TokenState) private _tokenState;
     mapping(IERC20 => mapping(uint256 => uint256)) private _tokensPerWeek;
 
@@ -70,11 +71,12 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
         uint64 timeCursor;
         uint128 lastEpochCheckpointed;
     }
+
     mapping(address => UserState) internal _userState;
     mapping(address => mapping(uint256 => uint256)) private _userBalanceAtTimestamp;
     mapping(address => mapping(IERC20 => uint256)) private _userTokenTimeCursor;
 
-    constructor(IVotingEscrow votingEscrow, uint256 startTime) EIP712("FeeDistributor", "1") {
+    constructor(IBleuVotingEscrow votingEscrow, uint256 startTime) EIP712("FeeDistributor", "1") {
         _votingEscrow = votingEscrow;
 
         startTime = _roundDownTimestamp(startTime);
@@ -93,7 +95,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
     /**
      * @notice Returns the VotingEscrow (veBAL) token contract
      */
-    function getVotingEscrow() external view override returns (IVotingEscrow) {
+    function getVotingEscrow() external view override returns (IBleuVotingEscrow) {
         return _votingEscrow;
     }
 
@@ -330,9 +332,8 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
             // We clearly cannot claim for `firstUnclaimableWeek` and so we break here.
             if (nextUserTokenWeekToClaim >= firstUnclaimableWeek) break;
 
-            amount +=
-                (tokensPerWeek[nextUserTokenWeekToClaim] * userBalanceAtTimestamp[nextUserTokenWeekToClaim]) /
-                _veSupplyCache[nextUserTokenWeekToClaim];
+            amount += (tokensPerWeek[nextUserTokenWeekToClaim] * userBalanceAtTimestamp[nextUserTokenWeekToClaim])
+                / _veSupplyCache[nextUserTokenWeekToClaim];
             nextUserTokenWeekToClaim += 1 weeks;
         }
         // Update the stored user-token time cursor to prevent this user claiming this week again.
@@ -371,8 +372,8 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
                 // We then want to get as close as possible to a single checkpoint every Wed 23:59 UTC to save gas.
 
                 // We then skip checkpointing if we're in the same week as the previous checkpoint.
-                bool alreadyCheckpointedThisWeek = _roundDownTimestamp(block.timestamp) ==
-                    _roundDownTimestamp(lastTokenTime);
+                bool alreadyCheckpointedThisWeek =
+                    _roundDownTimestamp(block.timestamp) == _roundDownTimestamp(lastTokenTime);
                 // However we want to ensure that all of this week's fees are assigned to the current week without
                 // overspilling into the next week. To mitigate this, we checkpoint if we're near the end of the week.
                 bool nearingEndOfWeek = _roundUpTimestamp(block.timestamp) - block.timestamp < 1 days;
@@ -409,8 +410,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
                 } else {
                     // block.timestamp >= lastTokenTime by definition.
                     tokensPerWeek[firstIncompleteWeek] +=
-                        (newTokensToDistribute * (block.timestamp - lastTokenTime)) /
-                        timeSinceLastCheckpoint;
+                        (newTokensToDistribute * (block.timestamp - lastTokenTime)) / timeSinceLastCheckpoint;
                 }
                 // As we've caught up to the present then we should now break.
                 break;
@@ -422,8 +422,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
                 } else {
                     // nextWeek > lastTokenTime by definition.
                     tokensPerWeek[firstIncompleteWeek] +=
-                        (newTokensToDistribute * (nextWeek - lastTokenTime)) /
-                        timeSinceLastCheckpoint;
+                        (newTokensToDistribute * (nextWeek - lastTokenTime)) / timeSinceLastCheckpoint;
                 }
             }
 
@@ -482,7 +481,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
             userEpoch = 1;
         }
 
-        IVotingEscrow.Point memory nextUserPoint = _votingEscrow.user_point_history(user, userEpoch);
+        IBleuVotingEscrow.Point memory nextUserPoint = _votingEscrow.user_point_history(user, userEpoch);
 
         // If this is the first checkpoint for the user, calculate the first week they're eligible for.
         // i.e. the timestamp of the first Thursday after they locked.
@@ -496,7 +495,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
 
         // It's safe to increment `userEpoch` and `nextWeekToCheckpoint` in this loop as epochs and timestamps
         // are always much smaller than 2^256 and are being incremented by small values.
-        IVotingEscrow.Point memory currentUserPoint;
+        IBleuVotingEscrow.Point memory currentUserPoint;
         for (uint256 i = 0; i < 50; ++i) {
             if (nextWeekToCheckpoint >= nextUserPoint.ts && userEpoch <= maxUserEpoch) {
                 // The week being considered is contained in a user epoch after that described by `currentUserPoint`.
@@ -506,7 +505,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
                 userEpoch += 1;
                 currentUserPoint = nextUserPoint;
                 if (userEpoch > maxUserEpoch) {
-                    nextUserPoint = IVotingEscrow.Point(0, 0, 0, 0);
+                    nextUserPoint = IBleuVotingEscrow.Point(0, 0, 0, 0);
                 } else {
                     nextUserPoint = _votingEscrow.user_point_history(user, userEpoch);
                 }
@@ -591,12 +590,11 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
     /**
      * @dev Return the user epoch number for `user` corresponding to the provided `timestamp`
      */
-    function _findTimestampUserEpoch(
-        address user,
-        uint256 timestamp,
-        uint256 minUserEpoch,
-        uint256 maxUserEpoch
-    ) internal view returns (uint256) {
+    function _findTimestampUserEpoch(address user, uint256 timestamp, uint256 minUserEpoch, uint256 maxUserEpoch)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 min = minUserEpoch;
         uint256 max = maxUserEpoch;
 
@@ -607,7 +605,7 @@ contract FeeDistributor is IFeeDistributor, OptionalOnlyCaller, ReentrancyGuard 
             // Algorithm assumes that inputs are less than 2^128 so this operation is safe.
             // +2 avoids getting stuck in min == mid < max
             uint256 mid = (min + max + 2) / 2;
-            IVotingEscrow.Point memory pt = _votingEscrow.user_point_history(user, mid);
+            IBleuVotingEscrow.Point memory pt = _votingEscrow.user_point_history(user, mid);
             if (pt.ts <= timestamp) {
                 min = mid;
             } else {
