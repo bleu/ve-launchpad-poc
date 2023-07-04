@@ -10,6 +10,14 @@ import "../MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
 import "../../lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
+import "../../lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
+import "../../lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/test/MockBasicAuthorizer.sol";
+import "../../lib/balancer-v2-monorepo/pkg/standalone-utils/contracts/ProtocolFeePercentagesProvider.sol";
+import "../../lib/balancer-v2-monorepo/pkg/interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
+import "../../lib/balancer-v2-monorepo/pkg/pool-utils/contracts/test/MockRateProvider.sol";
+import "../../lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-utils/IRateProvider.sol";
+import "../../lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPool.sol";
+
 
 abstract contract HelperContract {
     VyperDeployer vyperDeployer = new VyperDeployer();
@@ -19,16 +27,25 @@ abstract contract HelperContract {
     RewardDistributor rewardDistributor;
 
     IBleuVotingEscrow votingEscrow;
+    WeightedPoolFactory weightedPoolFactory;
+    MockBasicAuthorizer authorizer;
+    Vault vault;
+    ProtocolFeePercentagesProvider protocolFeeProvider;
 
     constructor() {
-        token = new MyToken("Voting Escrowed Test Token","veTEST");
-        weth = new MyToken("Wrapped ETH","WETH");
+        token = new MyToken("Voting Escrowed Test Token", "veTEST");
+        weth = new MyToken("Wrapped ETH", "WETH");
 
         votingEscrow = IBleuVotingEscrow(
             vyperDeployer.deployContract("VotingEscrow", abi.encode(token, "Voting Escrowed Test Token", "veTEST"))
         );
 
         rewardDistributor = new RewardDistributor(votingEscrow, 604800);
+
+        authorizer = new MockBasicAuthorizer();
+        vault = new Vault(authorizer, IWETH(0), 0, 0);
+        protocolFeeProvider = new ProtocolFeePercentagesProvider(vault, 1e18, 1e18);
+        weightedPoolFactory = new WeightedPoolFactory(vault, protocolFeeProvider, 0, 0);
     }
 }
 
