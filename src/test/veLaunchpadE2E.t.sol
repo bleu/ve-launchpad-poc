@@ -84,8 +84,8 @@ abstract contract HelperContract is Test {
         _poolToken.mint(address(this), 1000e18);
         _wETH.mint(address(this), 1000e18);
 
-        _poolToken.approve(address(_weightedPool), 1000e18);
-        _wETH.approve(address(_weightedPool), 1000e18);
+        _poolToken.approve(address(_vault), 1000e18);
+        _wETH.approve(address(_vault), 1000e18);
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = 1000e18;
@@ -94,8 +94,6 @@ abstract contract HelperContract is Test {
         bytes32 poolId = _weightedPool.getPoolId();
         (IERC20[] memory poolTokens,,) = _vault.getPoolTokens(poolId);
 
-        vm.roll(block.number + 1);
-
         _vault.joinPool(
             _weightedPool.getPoolId(),
             address(this),
@@ -103,7 +101,7 @@ abstract contract HelperContract is Test {
             IVault.JoinPoolRequest({
                 assets: _asIAsset(poolTokens),
                 maxAmountsIn: amounts,
-                userData: abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, 1e18),
+                userData: abi.encode(WeightedPoolUserData.JoinKind.INIT, amounts, 1e18),
                 fromInternalBalance: false
             })
         );
