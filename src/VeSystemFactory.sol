@@ -7,7 +7,7 @@ import "./RewardDistributor.sol";
 import "./IBleuVotingEscrow.sol";
 
 contract VeSystemFactory {
-    VyperDeployer _vyperDeployer = new VyperDeployer();
+    VyperDeployer internal _vyperDeployer = new VyperDeployer();
 
     address public owner;
     RewardDistributor public rewardDistributor;
