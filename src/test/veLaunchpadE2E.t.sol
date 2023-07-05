@@ -23,6 +23,9 @@ import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/Weighted
 abstract contract HelperContract is Test {
     MyToken _poolToken;
     MyToken _wETH;
+    MyToken _rewardToken;
+
+    uint256 public immutable YEAR = 365 * 86400;
 
     WeightedPool internal _weightedPool;
 
@@ -44,15 +47,10 @@ abstract contract HelperContract is Test {
     constructor() {
         _poolToken = new MyToken("Voting Escrowed Test Token", "veTEST");
         _wETH = new MyToken("Wrapped ETH", "WETH");
+        _rewardToken = new MyToken("Reward Token", "REWARD");
 
-        _votingEscrow = IBleuVotingEscrow(
-            _vyperDeployer.deployContract(
-                "VotingEscrow", abi.encode(_poolToken, "Voting Escrowed Test Token", "veTEST")
-            )
-        );
-
-        _rewardDistributor = new RewardDistributor(_votingEscrow, 604800);
         _authorizer = new MockBasicAuthorizer();
+        _authorizer.grantRole(0x00, address(this));
         _vault = new Vault(_authorizer, IWETH(0), 0, 0);
         _protocolFeeProvider = new ProtocolFeePercentagesProvider(_vault, 1e18, 1e18);
         _weightedPoolFactory = new WeightedPoolFactory(_vault, _protocolFeeProvider, 0, 0);
@@ -75,33 +73,49 @@ abstract contract HelperContract is Test {
 
         _weightedPool = WeightedPool(weightedPoolAddress);
 
+        _votingEscrow = IBleuVotingEscrow(
+            _vyperDeployer.deployContract(
+                "VotingEscrow", abi.encode(_weightedPool, "Voting Escrowed Test Token", "vePOOL")
+            )
+        );
+
+        _rewardDistributor = new RewardDistributor(_votingEscrow, 604800);
+
         assertEq(keccak256(abi.encodePacked(_weightedPool.name())), keccak256(abi.encodePacked("Test Pool")));
         assertEq(keccak256(abi.encodePacked(_weightedPool.symbol())), keccak256(abi.encodePacked("TEST")));
         assertEq(_weightedPool.getOwner(), address(this));
         assertEq(_weightedPool.totalSupply(), 0);
 
         // Add initial liquidity
-        _poolToken.mint(address(this), 1000e18);
-        _wETH.mint(address(this), 1000e18);
+        _poolToken.mint(address(this), 10_000e18);
+        _wETH.mint(address(this), 10_000e18);
 
-        _poolToken.approve(address(_vault), 1000e18);
-        _wETH.approve(address(_vault), 1000e18);
+        _poolToken.approve(address(_vault), 10_000e18);
+        _wETH.approve(address(_vault), 10_000e18);
 
         uint256[] memory amounts = new uint256[](2);
-        amounts[0] = 1000e18;
-        amounts[1] = 1000e18;
+        amounts[0] = 2000e18;
+        amounts[1] = 8000e18;
 
         bytes32 poolId = _weightedPool.getPoolId();
         (IERC20[] memory poolTokens,,) = _vault.getPoolTokens(poolId);
 
+        joinPoolHelper(
+            address(this), poolTokens, amounts, abi.encode(WeightedPoolUserData.JoinKind.INIT, amounts, 1e18)
+        );
+    }
+
+    function joinPoolHelper(address to, IERC20[] memory tokens, uint256[] memory amounts, bytes memory userData)
+        public
+    {
         _vault.joinPool(
             _weightedPool.getPoolId(),
             address(this),
-            address(this),
+            to,
             IVault.JoinPoolRequest({
-                assets: _asIAsset(poolTokens),
+                assets: _asIAsset(tokens),
                 maxAmountsIn: amounts,
-                userData: abi.encode(WeightedPoolUserData.JoinKind.INIT, amounts, 1e18),
+                userData: userData,
                 fromInternalBalance: false
             })
         );
@@ -133,7 +147,7 @@ contract veLaunchPadE2E is Test, HelperContract {
 
     function testCreateLock() public {
         uint256 amount = 1e18;
-        uint256 year = 365 * 86400;
+        uint256 YEAR = 365 * 86400;
         assertEq(_votingEscrow.totalSupply(), 0);
         assertEq(_poolToken.balanceOf(address(this)), 0);
         assertEq(_poolToken.totalSupply(), 0);
@@ -143,20 +157,20 @@ contract veLaunchPadE2E is Test, HelperContract {
         _poolToken.approve(address(_votingEscrow), amount);
         assertEq(_poolToken.balanceOf(address(this)), amount);
 
-        _votingEscrow.create_lock(amount, block.timestamp + year);
+        _votingEscrow.create_lock(amount, block.timestamp + YEAR);
         assertEq(_poolToken.balanceOf(address(this)), 0);
         assertEq(_votingEscrow.epoch(), 1);
 
         assertGt(_votingEscrow.totalSupply(), 0);
-        assertEq(_votingEscrow.totalSupply(block.timestamp + year), 0);
+        assertEq(_votingEscrow.totalSupply(block.timestamp + YEAR), 0);
     }
 
     function testIncreaseLockAmount() public {
         uint256 amount = 1e18;
-        uint256 year = 365 * 86400;
+        uint256 YEAR = 365 * 86400;
         _poolToken.mint(address(this), amount);
         _poolToken.approve(address(_votingEscrow), amount);
-        _votingEscrow.create_lock(amount / 2, block.timestamp + year);
+        _votingEscrow.create_lock(amount / 2, block.timestamp + YEAR);
         uint256 amountBefore = _votingEscrow.totalSupply();
         _votingEscrow.increase_amount(amount / 2);
         uint256 amountAfter = _votingEscrow.totalSupply();
@@ -165,7 +179,7 @@ contract veLaunchPadE2E is Test, HelperContract {
 
     function testFeeDistributor() public {
         uint256 amount = 10e18;
-        uint256 year = 365 * 86400;
+        uint256 YEAR = 365 * 86400;
 
         assertEq(_votingEscrow.totalSupply(), 0);
         assertEq(_poolToken.balanceOf(address(this)), 0);
@@ -176,13 +190,13 @@ contract veLaunchPadE2E is Test, HelperContract {
         assertEq(_poolToken.balanceOf(address(this)), amount);
 
         _poolToken.approve(address(_votingEscrow), 1e18);
-        _votingEscrow.create_lock(1e18, block.timestamp + year);
+        _votingEscrow.create_lock(1e18, block.timestamp + YEAR);
 
         assertEq(_poolToken.balanceOf(address(this)), 9e18);
         assertEq(_votingEscrow.epoch(), 1);
 
         assertGt(_votingEscrow.totalSupply(), 0);
-        assertEq(_votingEscrow.totalSupply(block.timestamp + year), 0);
+        assertEq(_votingEscrow.totalSupply(block.timestamp + YEAR), 0);
 
         // assertEq(_rewardDistributor.getVotingEscrow(), _votingEscrow);
 
@@ -212,10 +226,10 @@ contract veLaunchPadE2E is Test, HelperContract {
 
     function testE2E() public {
         // On Helper Contract initialization:
-        // Deploy 2 ERC20 -> BAL, WETH;
+        // Deploy 2 ERC20 -> RewardToken, WETH;
         // Deploy Voting Escrow;
         // Deploy RewardDistributor;
-        // Mint 1000 BAL, 1000 WETH;
+        // Mint 1000 RewardToken, 1000 WETH;
         // Deploy Weighted Pool factory;
         // Deploy 80/20 Pool;
 
@@ -223,26 +237,75 @@ contract veLaunchPadE2E is Test, HelperContract {
         address alice = address(1);
         address bob = address(2);
 
-        // Mint 100 BAL to A;
-        _poolToken.mint(alice, 100e18);
-        // User A to join pool with 100 BAL;
-        // User A to lock pool BPT in Voting Escrow;
+        // Mint 100 RewardToken to A;
+        // _poolToken.mint(alice, 100e18);
+        // _poolToken.approve(address(_vault), 100e18);
 
-        // Mint 200 BAL to B;
-        _poolToken.mint(bob, 200e18);
-        // User B to join pool with 200 BAL;
-        // User B to lock pool BPT in Voting Escrow;
+        IERC20[] memory toDepositTokens = new IERC20[](2);
+        toDepositTokens[0] = _poolToken;
+        toDepositTokens[1] = _wETH;
 
-        // Admin deposits 90 BAL in RewardDistributor;
-        _poolToken.approve(address(_rewardDistributor), 90e18);
+        uint256[] memory aliceAmounts = new uint256[](2);
+        aliceAmounts[0] = 100e18;
+        aliceAmounts[1] = 400e18;
 
+        joinPoolHelper(
+            alice,
+            toDepositTokens,
+            aliceAmounts,
+            abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, aliceAmounts, 1e18)
+        );
+
+        uint256 aliceBPTAmount = _weightedPool.balanceOf(address(alice));
+
+        vm.startPrank(alice);
+        _weightedPool.approve(address(_votingEscrow), aliceBPTAmount);
+        _votingEscrow.create_lock(aliceBPTAmount, block.timestamp + YEAR);
+        vm.stopPrank();
+
+        assertEq(_votingEscrow.balanceOf(address(alice)), _votingEscrow.totalSupply());
+
+        uint256[] memory bobAmounts = new uint256[](2);
+        bobAmounts[0] = 200e18;
+        bobAmounts[1] = 800e18;
+
+        joinPoolHelper(
+            bob,
+            toDepositTokens,
+            bobAmounts,
+            abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, bobAmounts, 1e18)
+        );
+
+        uint256 bobBPTAmount = _weightedPool.balanceOf(address(bob));
+
+        vm.startPrank(bob);
+        _weightedPool.approve(address(_votingEscrow), bobBPTAmount);
+        _votingEscrow.create_lock(bobBPTAmount, block.timestamp + YEAR);
+        vm.stopPrank();
+
+        // // Admin deposits 90 RewardToken in RewardDistributor;
         vm.warp(604801);
-        _rewardDistributor.depositToken(_poolToken, 90e18);
 
-        // User A claims 30 BAL from RewardDistributor;
-        _rewardDistributor.claimToken(alice, _poolToken);
+        _rewardToken.mint(address(this), 90e18);
+        _rewardToken.approve(address(_rewardDistributor), 90e18);
+        _rewardDistributor.depositToken(_rewardToken, 90e18);
 
-        // User B claims 60 BAL from RewardDistributor;
-        _rewardDistributor.claimToken(bob, _poolToken);
+        _rewardDistributor.checkpoint();
+
+        vm.warp(604800 * 2);
+
+        // User A claims 30 RewardToken from RewardDistributor;
+        _rewardDistributor.claimToken(alice, _rewardToken);
+
+        // User B claims 60 RewardToken from RewardDistributor;
+        _rewardDistributor.claimToken(bob, _rewardToken);
+
+        uint256 aliceRewardBalance = _rewardToken.balanceOf(address(alice));
+        uint256 bobRewardBalance = _rewardToken.balanceOf(address(bob));
+
+        assertApproxEqRel(aliceRewardBalance, 30e18, 1e6);
+        assertApproxEqRel(bobRewardBalance, 60e18, 1e6);
+
+        assertApproxEqRel(aliceRewardBalance + bobRewardBalance, 90e18, 1e6);
     }
 }
