@@ -31,11 +31,6 @@ abstract contract HelperContract is Test {
 
     VyperDeployer internal _vyperDeployer = new VyperDeployer();
 
-    // IVault internal _vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-
-    // IWeightedPoolFactory internal _weightedPoolFactory =
-    //     IWeightedPoolFactory(0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b);
-
     RewardDistributor _rewardDistributor;
 
     IBleuVotingEscrow _votingEscrow;

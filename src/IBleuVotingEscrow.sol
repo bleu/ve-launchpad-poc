@@ -30,7 +30,7 @@ interface IBleuVotingEscrow is IERC20 {
         uint256 ts;
         uint256 blk; // block
     }
-
+    function initialize(address token, string memory name, string memory symbol) external;
     function epoch() external view returns (uint256);
 
     // function admin() external view returns (IAuthorizerAdaptor);
@@ -67,17 +67,3 @@ interface IBleuVotingEscrow is IERC20 {
     function user_point_history(address user, uint256 timestamp) external view returns (Point memory);
     function withdraw() external;
 }
-
-// pragma solidity >=0.6.0 <0.9.0;
-
-// interface IERC20 {
-//     function decimals() external view returns (uint256);
-//     function name() external view returns (string memory);
-//     function symbol() external view returns (string memory);
-//     function transfer(address to, uint256 amount) external returns (bool);
-//     function transferFrom(address spender, address to, uint256 amount) external returns (bool);
-// }
-
-// interface ISmartWalletChecker {
-//     function check(address addr) external returns (bool);
-// }

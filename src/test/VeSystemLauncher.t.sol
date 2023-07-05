@@ -1,105 +1,135 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity ^0.7.6;
-// pragma abicoder v2;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
-// import "forge-std/Test.sol";
+import "forge-std/Test.sol";
 
-// import "../../utils/VyperDeployer.sol";
+import "../../utils/VyperDeployer.sol";
 
-// import "../MyToken.sol";
-// import "../RewardDistributor.sol";
-// import "../IBleuVotingEscrow.sol";
-// import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
-// import "lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
-// import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/test/MockBasicAuthorizer.sol";
-// import "lib/balancer-v2-monorepo/pkg/standalone-utils/contracts/ProtocolFeePercentagesProvider.sol";
-// import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
-// import "lib/balancer-v2-monorepo/pkg/pool-utils/contracts/test/MockRateProvider.sol";
-// import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-utils/IRateProvider.sol";
-// import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPool.sol";
-// import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpers.sol";
-// import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
-// import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
+import "../MyToken.sol";
+import "../RewardDistributor.sol";
+import "../IBleuVotingEscrow.sol";
+import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
+import "lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
+import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/test/MockBasicAuthorizer.sol";
+import "lib/balancer-v2-monorepo/pkg/standalone-utils/contracts/ProtocolFeePercentagesProvider.sol";
+import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
+import "lib/balancer-v2-monorepo/pkg/pool-utils/contracts/test/MockRateProvider.sol";
+import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-utils/IRateProvider.sol";
+import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPool.sol";
+import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpers.sol";
+import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
+import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
-// import "../MyToken.sol";
-// import "../RewardDistributor.sol";
-// import "../VeSystemFactory.sol";
+import "../MyToken.sol";
+import "../RewardDistributor.sol";
+import "../VeBPTFactory.sol";
 
-// abstract contract HelperContract is Test {
-//     MyToken internal _poolToken = new MyToken("Voting Escrowed Test Token", "veTEST");
-//     MyToken internal _wETH = new MyToken("Wrapped ETH", "WETH");
+abstract contract HelperContract is Test {
+    MyToken _bleu;
+    MyToken _wETH;
 
-//     WeightedPool internal _weightedPool;
+    uint256 public immutable YEAR = 365 * 86400;
 
-//     VyperDeployer internal _vyperDeployer = new VyperDeployer();
+    WeightedPool internal _weightedPool;
 
-//     IVault internal _vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+    VyperDeployer internal _vyperDeployer = new VyperDeployer();
 
-//     IWeightedPoolFactory internal _weightedPoolFactory =
-//         IWeightedPoolFactory(0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b);
+    RewardDistributor _rewardDistributor;
 
-//     constructor() {
-//         IERC20[] memory tokens = new IERC20[](2);
-//         tokens[0] = IERC20(_veToken);
-//         tokens[1] = IERC20(_wETH);
+    IBleuVotingEscrow _baseVotingEscrow;
+    WeightedPoolFactory _weightedPoolFactory;
+    MockBasicAuthorizer _authorizer;
+    Vault _vault;
+    ProtocolFeePercentagesProvider _protocolFeeProvider;
 
-//         uint256[] memory weights = new uint256[](2);
-//         weights[0] = 20e16;
-//         weights[1] = 80e16;
+    constructor() {
+        _bleu = new MyToken("Bleu token", "BLEU");
+        _wETH = new MyToken("Wrapped ETH", "WETH");
 
-//         IRateProvider[] memory rateProviders = new IRateProvider[](2);
-//         rateProviders[0] = new MockRateProvider();
-//         rateProviders[1] = new MockRateProvider();
+        _authorizer = new MockBasicAuthorizer();
+        _authorizer.grantRole(0x00, address(this));
+        _vault = new Vault(_authorizer, IWETH(0), 0, 0);
+        _protocolFeeProvider = new ProtocolFeePercentagesProvider(_vault, 1e18, 1e18);
+        _weightedPoolFactory = new WeightedPoolFactory(_vault, _protocolFeeProvider, 0, 0);
 
-//         bytes32 salt = bytes32(0);
-//         address weightedPoolAddress =
-//             _weightedPoolFactory.create("Test Pool", "TEST", tokens, weights, rateProviders, 1e12, address(this), salt);
+        IERC20[] memory tokens = new IERC20[](2);
+        tokens[0] = IERC20(_bleu);
+        tokens[1] = IERC20(_wETH);
 
-//         _weightedPool = WeightedPool(weightedPoolAddress);
+        uint256[] memory weights = new uint256[](2);
+        weights[0] = 20e16;
+        weights[1] = 80e16;
 
-//         assertEq(keccak256(abi.encodePacked(_weightedPool.name())), keccak256(abi.encodePacked("Test Pool")));
-//         assertEq(keccak256(abi.encodePacked(_weightedPool.symbol())), keccak256(abi.encodePacked("TEST")));
-//         assertEq(_weightedPool.getOwner(), address(this));
-//         assertEq(_weightedPool.totalSupply(), 0);
+        IRateProvider[] memory rateProviders = new IRateProvider[](2);
+        rateProviders[0] = new MockRateProvider();
+        rateProviders[1] = new MockRateProvider();
 
-//         // Add initial liquidity
-//         _veToken.mint(address(this), 1000e18);
-//         _wETH.mint(address(this), 1000e18);
+        bytes32 salt = bytes32(0);
+        address weightedPoolAddress =
+            _weightedPoolFactory.create("Test Pool", "TEST", tokens, weights, rateProviders, 1e12, address(this), salt);
 
-//         _veToken.approve(address(_weightedPool), 1000e18);
-//         _wETH.approve(address(_weightedPool), 1000e18);
+        _weightedPool = WeightedPool(weightedPoolAddress);
 
-//         uint256[] memory amounts = new uint256[](2);
-//         amounts[0] = 1000e18;
-//         amounts[1] = 1000e18;
+        _baseVotingEscrow = IBleuVotingEscrow(
+            _vyperDeployer.deployContract(
+                "VotingEscrow", abi.encode(_wETH, "Base Voting Escrowed", "veBASE")
+            )
+        );
 
-//         bytes32 poolId = _weightedPool.getPoolId();
-//         (IERC20[] memory poolTokens,,) = _vault.getPoolTokens(poolId);
+        // _rewardDistributor = new RewardDistributor(_votingEscrow, 604800);
 
-//         _vault.joinPool(
-//             _weightedPool.getPoolId(),
-//             address(this),
-//             address(this),
-//             IVault.JoinPoolRequest({
-//                 assets: _asIAsset(poolTokens),
-//                 maxAmountsIn: amounts,
-//                 userData: abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, 1e18),
-//                 fromInternalBalance: false
-//             })
-//         );
-//     }
-// }
+        assertEq(keccak256(abi.encodePacked(_weightedPool.name())), keccak256(abi.encodePacked("Test Pool")));
+        assertEq(keccak256(abi.encodePacked(_weightedPool.symbol())), keccak256(abi.encodePacked("TEST")));
+        assertEq(_weightedPool.getOwner(), address(this));
+        assertEq(_weightedPool.totalSupply(), 0);
 
-// contract VeSystemLauncherTest is HelperContract {
-//     VeSystemFactory internal _veSystemFactory;
+        // Add initial liquidity
+        _bleu.mint(address(this), 10_000e18);
+        _wETH.mint(address(this), 10_000e18);
 
-//     constructor() {
-//         // abi.encode(_veToken, "Voting Escrowed Test Token", "veTEST"), 604800
+        _bleu.approve(address(_vault), 10_000e18);
+        _wETH.approve(address(_vault), 10_000e18);
 
-//         _veSystemFactory = new VeSystemFactory();
-//     }
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 2000e18;
+        amounts[1] = 8000e18;
 
-//     function testGetOwner() public {
-//         assertEq(_veSystemFactory.owner(), address(this));
-//     }
-// }
+        bytes32 poolId = _weightedPool.getPoolId();
+        (IERC20[] memory poolTokens,,) = _vault.getPoolTokens(poolId);
+
+        joinPoolHelper(
+            address(this), poolTokens, amounts, abi.encode(WeightedPoolUserData.JoinKind.INIT, amounts, 1e18)
+        );
+    }
+
+    function joinPoolHelper(address to, IERC20[] memory tokens, uint256[] memory amounts, bytes memory userData)
+        public
+    {
+        _vault.joinPool(
+            _weightedPool.getPoolId(),
+            address(this),
+            to,
+            IVault.JoinPoolRequest({
+                assets: _asIAsset(tokens),
+                maxAmountsIn: amounts,
+                userData: userData,
+                fromInternalBalance: false
+            })
+        );
+    }
+}
+
+contract VeSystemLauncherTest is HelperContract {
+    VeSystemFactory internal _veBPTFactory;
+
+    constructor() {
+        _veBPTFactory = new VeSystemFactory(address(_baseVotingEscrow), address(0));
+    }
+
+    function testImplementations() public {
+        assertEq(_veBPTFactory.getVotingEscrowImplementation(), address(_baseVotingEscrow));
+    }
+
+
+}
