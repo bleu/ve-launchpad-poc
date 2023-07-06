@@ -22,7 +22,6 @@ import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpe
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
-
 abstract contract HelperContract is Test {
     MyToken _bleu;
     MyToken _wETH;
@@ -104,12 +103,14 @@ abstract contract HelperContract is Test {
 
 contract VeSystemLauncherTest is HelperContract {
     IVeSystemFactory internal _veSystemFactory;
-    RewardDistributor internal _rewardDistributorBlueprint;
     IBleuVotingEscrow internal _votingEscrowBlueprint;
     IBleuVotingEscrow internal _veBleu;
+    IRewardDistributor internal _rewardDistributorBlueprint;
+    IRewardDistributor internal _rewardDistributorBleu;
 
     constructor() {
         _votingEscrowBlueprint = IBleuVotingEscrow(_vyperDeployer.deployBlueprint("VotingEscrowBlueprint"));
+        _rewardDistributorBlueprint = IRewardDistributor(_vyperDeployer.deploySolidityBlueprint("RewardDistributor.sol:RewardDistributor"));
         _veSystemFactory = IVeSystemFactory(
             _vyperDeployer.deployContract(
                 "VeSystemFactory", abi.encode(address(_votingEscrowBlueprint), address(_rewardDistributorBlueprint))
@@ -117,17 +118,19 @@ contract VeSystemLauncherTest is HelperContract {
         );
         (address _veBleuAddress, address _veBleuRewardAddress) = _veSystemFactory.deploy(address(_weightedPool), "Bleu", "BLEU", block.timestamp + YEAR);
         _veBleu = IBleuVotingEscrow(_veBleuAddress);
+        _rewardDistributorBleu = IRewardDistributor(_veBleuRewardAddress);
     }
 
     function testBlueprints() public {
         assertEq(_veSystemFactory.votingEscrowBlueprint(), address(_votingEscrowBlueprint));
+        assertEq(_veSystemFactory.rewardDistributorBlueprint(), address(_rewardDistributorBlueprint));
     }
 
     function testDeployVotingEscrow() public {
         assert(_veSystemFactory.votingEscrowRegister(address(_veBleu)));
         assertEq(_veBleu.token(), address(_weightedPool));
         assertEq(_veBleu.admin(), address(this));
-        
+
         assertEq(_veBleu.totalSupply(), 0);
         uint256 _BPTBeforeLock = _weightedPool.balanceOf(address(this));
 
