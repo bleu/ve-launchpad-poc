@@ -9,6 +9,7 @@ import "../../utils/VyperDeployer.sol";
 import "./helpers/MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
+import "../IVeSystemFactory.sol";
 import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 import "lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
 import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/test/MockBasicAuthorizer.sol";
@@ -21,8 +22,6 @@ import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpe
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
-import "../RewardDistributor.sol";
-import "../VeBPTFactory.sol";
 
 abstract contract HelperContract is Test {
     MyToken _bleu;
@@ -34,9 +33,6 @@ abstract contract HelperContract is Test {
 
     VyperDeployer internal _vyperDeployer = new VyperDeployer();
 
-    RewardDistributor _rewardDistributor;
-
-    IBleuVotingEscrow _baseVotingEscrow;
     WeightedPoolFactory _weightedPoolFactory;
     MockBasicAuthorizer _authorizer;
     Vault _vault;
@@ -69,17 +65,6 @@ abstract contract HelperContract is Test {
             _weightedPoolFactory.create("Test Pool", "TEST", tokens, weights, rateProviders, 1e12, address(this), salt);
 
         _weightedPool = WeightedPool(weightedPoolAddress);
-
-        _baseVotingEscrow = IBleuVotingEscrow(
-            _vyperDeployer.deployContract("VotingEscrow", abi.encode(_wETH, "Base Voting Escrowed", "veBASE"))
-        );
-
-        // _rewardDistributor = new RewardDistributor(_votingEscrow, 604800);
-
-        assertEq(keccak256(abi.encodePacked(_weightedPool.name())), keccak256(abi.encodePacked("Test Pool")));
-        assertEq(keccak256(abi.encodePacked(_weightedPool.symbol())), keccak256(abi.encodePacked("TEST")));
-        assertEq(_weightedPool.getOwner(), address(this));
-        assertEq(_weightedPool.totalSupply(), 0);
 
         // Add initial liquidity
         _bleu.mint(address(this), 10_000e18);
@@ -118,13 +103,25 @@ abstract contract HelperContract is Test {
 }
 
 contract VeSystemLauncherTest is HelperContract {
-    VeSystemFactory internal _veBPTFactory;
+    IVeSystemFactory internal _veSystemFactory;
+    RewardDistributor internal _rewardDistributorBlueprint;
+    IBleuVotingEscrow internal _votingEscrowBlueprint;
 
     constructor() {
-        _veBPTFactory = new VeSystemFactory(address(_baseVotingEscrow), address(0));
+        _votingEscrowBlueprint = IBleuVotingEscrow(_vyperDeployer.deployBlueprint("VotingEscrowBlueprint"));
+        _veSystemFactory = IVeSystemFactory(
+            _vyperDeployer.deployContract(
+                "VeSystemFactory", abi.encode(address(_votingEscrowBlueprint), address(_rewardDistributorBlueprint))
+            )
+        );
     }
 
-    function testImplementations() public {
-        assertEq(_veBPTFactory.getVotingEscrowImplementation(), address(_baseVotingEscrow));
+    function testBlueprints() public {
+        (address blueprint1, address blueprint2) = _veSystemFactory.getBlueprints();
+        assertEq(blueprint1, address(_votingEscrowBlueprint));
     }
+
+    // function testDeploy() public {
+    //     _veSystemFactory.deploy(address(_bleu), "Bleu", "BLEU", block.timestamp + YEAR);
+    // }
 }

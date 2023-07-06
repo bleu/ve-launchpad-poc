@@ -30,9 +30,7 @@ interface IBleuVotingEscrow is IERC20 {
         uint256 blk; // block
     }
 
-    function initialize(address token, string memory name, string memory symbol) external;
     function epoch() external view returns (uint256);
-
     // function admin() external view returns (IAuthorizerAdaptor);
     function admin() external view returns (address);
     // function apply_smart_wallet_checker() external;
