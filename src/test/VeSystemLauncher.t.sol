@@ -9,6 +9,7 @@ import "../../utils/VyperDeployer.sol";
 import "./helpers/MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
+import "../IVeSystemFactory.sol";
 import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 import "lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
 import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/test/MockBasicAuthorizer.sol";
@@ -21,8 +22,6 @@ import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpe
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
-import "../RewardDistributor.sol";
-import "../IVeSystemFactory.sol";
 
 abstract contract HelperContract is Test {
     MyToken _bleu;
@@ -109,7 +108,7 @@ contract VeSystemLauncherTest is HelperContract {
     IBleuVotingEscrow internal _votingEscrowBlueprint;
 
     constructor() {
-        _votingEscrowBlueprint = IBleuVotingEscrow(_vyperDeployer.deployBlueprint("VotingEscrow"));
+        _votingEscrowBlueprint = IBleuVotingEscrow(_vyperDeployer.deployBlueprint("VotingEscrowBlueprint"));
         _veSystemFactory = IVeSystemFactory(
             _vyperDeployer.deployContract(
                 "VeSystemFactory", abi.encode(address(_votingEscrowBlueprint), address(_rewardDistributorBlueprint))
