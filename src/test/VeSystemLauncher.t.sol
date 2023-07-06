@@ -27,6 +27,7 @@ abstract contract HelperContract is Test {
     MyToken _wETH;
 
     uint256 public YEAR = 365 * 86400;
+    uint256 public WEEK = 7 * 86400;
 
     WeightedPool internal _weightedPool;
 
@@ -36,6 +37,7 @@ abstract contract HelperContract is Test {
     MockBasicAuthorizer _authorizer;
     Vault _vault;
     ProtocolFeePercentagesProvider _protocolFeeProvider;
+    IERC20[] _poolTokens;
 
     constructor() {
         _bleu = new MyToken("Bleu token", "BLEU");
@@ -50,6 +52,7 @@ abstract contract HelperContract is Test {
         IERC20[] memory tokens = new IERC20[](2);
         tokens[0] = IERC20(_bleu);
         tokens[1] = IERC20(_wETH);
+        _poolTokens = tokens;
 
         uint256[] memory weights = new uint256[](2);
         weights[0] = 20e16;
@@ -77,14 +80,13 @@ abstract contract HelperContract is Test {
         amounts[1] = 8000e18;
 
         bytes32 poolId = _weightedPool.getPoolId();
-        (IERC20[] memory poolTokens,,) = _vault.getPoolTokens(poolId);
 
         joinPoolHelper(
-            address(this), poolTokens, amounts, abi.encode(WeightedPoolUserData.JoinKind.INIT, amounts, 1e18)
+            address(this), amounts, abi.encode(WeightedPoolUserData.JoinKind.INIT, amounts, 1e18)
         );
     }
 
-    function joinPoolHelper(address to, IERC20[] memory tokens, uint256[] memory amounts, bytes memory userData)
+    function joinPoolHelper(address to, uint256[] memory amounts, bytes memory userData)
         public
     {
         _vault.joinPool(
@@ -92,7 +94,7 @@ abstract contract HelperContract is Test {
             address(this),
             to,
             IVault.JoinPoolRequest({
-                assets: _asIAsset(tokens),
+                assets: _asIAsset(_poolTokens),
                 maxAmountsIn: amounts,
                 userData: userData,
                 fromInternalBalance: false
@@ -109,14 +111,32 @@ contract VeSystemLauncherTest is HelperContract {
     IRewardDistributor internal _rewardDistributorBleu;
 
     constructor() {
-        _votingEscrowBlueprint = IBleuVotingEscrow(_vyperDeployer.deployBlueprint("VotingEscrowBlueprint"));
-        _rewardDistributorBlueprint = IRewardDistributor(_vyperDeployer.deploySolidityBlueprint("RewardDistributor.sol:RewardDistributor"));
-        _veSystemFactory = IVeSystemFactory(
-            _vyperDeployer.deployContract(
-                "VeSystemFactory", abi.encode(address(_votingEscrowBlueprint), address(_rewardDistributorBlueprint))
+        _votingEscrowBlueprint = IBleuVotingEscrow(
+            _vyperDeployer.deployBlueprint(
+                "VotingEscrowBlueprint"
             )
         );
-        (address _veBleuAddress, address _veBleuRewardAddress) = _veSystemFactory.deploy(address(_weightedPool), "Bleu", "BLEU", block.timestamp + YEAR);
+        _rewardDistributorBlueprint = IRewardDistributor(
+            _vyperDeployer.deploySolidityBlueprint(
+                "RewardDistributor.sol:RewardDistributor"
+            )
+        );
+        _veSystemFactory = IVeSystemFactory(
+            _vyperDeployer.deployContract(
+                "VeSystemFactory",
+                abi.encode(
+                    address(_votingEscrowBlueprint),
+                    address(_rewardDistributorBlueprint)
+                )
+            )
+        );
+
+        (address _veBleuAddress, address _veBleuRewardAddress) = _veSystemFactory.deploy(
+            address(_weightedPool),
+            "Bleu",
+            "BLEU",
+            WEEK
+        );
         _veBleu = IBleuVotingEscrow(_veBleuAddress);
         _rewardDistributorBleu = IRewardDistributor(_veBleuRewardAddress);
     }
@@ -126,7 +146,7 @@ contract VeSystemLauncherTest is HelperContract {
         assertEq(_veSystemFactory.rewardDistributorBlueprint(), address(_rewardDistributorBlueprint));
     }
 
-    function testDeployVotingEscrow() public {
+    function testVotingEscrow() public {
         assert(_veSystemFactory.votingEscrowRegister(address(_veBleu)));
         assertEq(_veBleu.token(), address(_weightedPool));
         assertEq(_veBleu.admin(), address(this));
@@ -143,5 +163,65 @@ contract VeSystemLauncherTest is HelperContract {
         _veBleu.checkpoint();
 
         assertGt(_veBleu.balanceOf(address(this)), 0);
+    }
+
+    function testRewardDistribution() public {
+        address alice = address(1);
+        address bob = address(2);
+
+        // Alice joins on the pool
+        uint256[] memory aliceAmounts = new uint256[](2);
+        aliceAmounts[0] = 100e18;
+        aliceAmounts[1] = 400e18;
+        joinPoolHelper(
+            alice,
+            aliceAmounts,
+            abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, aliceAmounts, 1e18)
+        );
+
+        // Alice locks BPT into the voting escrow
+        uint256 aliceBPTAmount = _weightedPool.balanceOf(address(alice));
+        vm.startPrank(alice);
+        _weightedPool.approve(address(_veBleu), aliceBPTAmount);
+        _veBleu.create_lock(aliceBPTAmount, block.timestamp + YEAR);
+        vm.stopPrank();
+
+        // Bob joins on the pool
+        uint256[] memory bobAmounts = new uint256[](2);
+        bobAmounts[0] = aliceAmounts[0]*2;
+        bobAmounts[1] = aliceAmounts[1]*2;
+        joinPoolHelper(
+            bob,
+            bobAmounts,
+            abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, bobAmounts, 1e18)
+        );
+
+        // Bob locks BPT into the voting escrow
+        uint256 bobBPTAmount = _weightedPool.balanceOf(address(bob));
+        vm.startPrank(bob);
+        _weightedPool.approve(address(_veBleu), bobBPTAmount);
+        _veBleu.create_lock(bobBPTAmount, block.timestamp + YEAR);
+        vm.stopPrank();
+
+        // One week later, admin deposits 90 RewardToken in RewardDistributor;
+        vm.warp(WEEK + 1);
+        _bleu.approve(address(_rewardDistributorBleu), 90e18);
+        _rewardDistributorBleu.depositToken(_bleu, 90e18);
+        _rewardDistributorBleu.checkpoint();
+
+        vm.warp(WEEK * 2);
+
+        // Two weeks later, bob and alice claims tokens;
+        _rewardDistributorBleu.claimToken(alice, _bleu);
+        _rewardDistributorBleu.claimToken(bob, _bleu);
+
+        // Check that alice and bob have the correct amount of tokens
+        assertApproxEqRel(_bleu.balanceOf(address(alice)), 30e18, 1e6);
+        assertApproxEqRel(_bleu.balanceOf(address(bob)), 60e18, 1e6);
+        assertApproxEqRel(
+            _bleu.balanceOf(address(alice)) + _bleu.balanceOf(address(bob)),
+            90e18,
+            1e6
+        );
     }
 }

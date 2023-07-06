@@ -6,6 +6,11 @@ rewardDistributorRegister: public(HashMap[address, bool])
 interface tokenInterface:
     def getOwner() -> address: view
 
+event NewVESystem:
+    admin: address
+    token: address
+    votingEscrowAddres: address
+    rewardDistributorAddress: address
 
 @external
 def __init__(
@@ -35,5 +40,19 @@ def deploy(
     )
     self.votingEscrowRegister[_deployedVE] = True
 
-    # _deployedRD: address = create_from_blueprint(self.rewardDistributorBlueprint, _deployedVE, _startRewardDistributorTime)
-    return (_deployedVE, _tokenAddr)
+
+    _deployedRD: address = create_from_blueprint(
+        self.rewardDistributorBlueprint,
+        _deployedVE,
+        _startRewardDistributorTime,
+        code_offset=3,
+    )
+    self.rewardDistributorRegister[_deployedRD] = True
+
+    log NewVESystem(
+        msg.sender,
+        _tokenAddr,
+        _deployedVE,
+        _deployedRD
+    )
+    return (_deployedVE, _deployedRD)
