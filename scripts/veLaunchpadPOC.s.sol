@@ -21,7 +21,9 @@ contract Deploy is Script {
         token = new MyToken("Voting Escrowed Test Token","veTEST");
 
         votingEscrow = IVotingEscrow(
-            vyperDeployer.deployContract("VotingEscrow", abi.encode(token, "Voting Escrowed Test Token", "veTEST"))
+            vyperDeployer.deployContract(
+                "VotingEscrowBlueprint", abi.encode(token, "Voting Escrowed Test Token", "veTEST")
+            )
         );
 
         vm.stopBroadcast();

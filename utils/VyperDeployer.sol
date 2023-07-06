@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 ///@notice This cheat codes interface is named _CheatCodes so you can use the CheatCodes interface in other testing files without errors
 interface _CheatCodes {
     function ffi(string[] calldata) external returns (bytes memory);
+    function getCode(string calldata) external returns (bytes memory);
 }
 
 contract VyperDeployer {
@@ -20,7 +21,7 @@ contract VyperDeployer {
     function deployContract(string memory fileName) public returns (address) {
         ///@notice create a list of strings with the commands necessary to compile Vyper contracts
         string[] memory cmds = new string[](2);
-        cmds[0] = "vyper";
+        cmds[0] = "vyper_compile";
         cmds[1] = string(abi.encodePacked("vyper_contracts/", fileName, ".vy"));
 
         bytes memory bytecode = cheatCodes.ffi(cmds);
@@ -44,7 +45,7 @@ contract VyperDeployer {
     function deployContract(string memory fileName, bytes calldata args) public returns (address) {
         ///@notice create a list of strings with the commands necessary to compile Vyper contracts
         string[] memory cmds = new string[](2);
-        cmds[0] = "vyper";
+        cmds[0] = "vyper_compile";
         cmds[1] = string(abi.encodePacked("vyper_contracts/", fileName, ".vy"));
 
         bytes memory _bytecode = cheatCodes.ffi(cmds);
@@ -93,7 +94,45 @@ contract VyperDeployer {
                 len, // DEPLOY_PREAMBLE_BYTE_LENGTH
                 hex"3d81600a3d39f3", // DEPLOY_PREABLE_POST_LENGTH_BYTES
                 eip_5202_bytecode
-        )
+            )
+        );
+
+        address deployedAddress;
+        assembly {
+            deployedAddress := create(0, add(deployBytecode, 0x20), mload(deployBytecode))
+        }
+
+        require(deployedAddress != address(0), "VyperDeployer could not deploy contract");
+
+        ///@notice return the address that the contract was deployed to
+        return deployedAddress;
+    }
+
+    /// @dev Consider listening to the Blueprint if you haven't already
+    /// @param contractName - The file name of the Blueprint Contract
+    function deploySolidityBlueprint(string memory contractName) public returns (address) {
+        bytes memory bytecode = abi.encodePacked(cheatCodes.getCode(contractName));
+
+        require(bytecode.length > 0, "Initcodes length must be greater than 0");
+
+        bytes memory eip_5202_bytecode = bytes(
+            abi.encodePacked(
+                hex"fe", // EIP_5202_EXECUTION_HALT_BYTE
+                hex"71", // EIP_5202_BLUEPRINT_IDENTIFIER_BYTE
+                hex"00", // EIP_5202_VERSION_BYTE
+                bytecode
+            )
+        );
+
+        bytes2 len = bytes2(uint16(eip_5202_bytecode.length));
+
+        bytes memory deployBytecode = bytes(
+            abi.encodePacked(
+                hex"61", // DEPLOY_PREAMBLE_INITIAL_BYTE
+                len, // DEPLOY_PREAMBLE_BYTE_LENGTH
+                hex"3d81600a3d39f3", // DEPLOY_PREABLE_POST_LENGTH_BYTES
+                eip_5202_bytecode
+            )
         );
 
         address deployedAddress;

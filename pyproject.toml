@@ -2,19 +2,24 @@
 name = "ve-launchpad"
 version = "0.1.0"
 description = ""
-authors = ["José Ribeiro <jose@bleu.studio>"]
+authors = [
+    "José Ribeiro <jose@bleu.studio>",
+    "Pedro Yves Fracari <pedro@bleu.studio>",
+]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-# For some reason vyper doesn't work on MacOS after 0.3.7 and Python > 3.9
-vyper = "^0.3.7"
 
 
 [tool.poetry.group.dev.dependencies]
+vyper = "0.3.7"
 mamushi = "^0.0.2a1"
 mypy-extensions = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+vyper_compile = { callable = "ve_launchpad:compile_bytecode.cli" }

@@ -70,7 +70,7 @@ abstract contract HelperContract is Test {
 
         _votingEscrow = IBleuVotingEscrow(
             _vyperDeployer.deployContract(
-                "VotingEscrow", abi.encode(_weightedPool, "Voting Escrowed Test Token", "vePOOL")
+                "VotingEscrowBlueprint", abi.encode(_weightedPool, "Voting Escrowed Test Token", "vePOOL")
             )
         );
 
