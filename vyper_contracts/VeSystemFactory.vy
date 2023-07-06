@@ -1,6 +1,7 @@
-votingEscrowBlueprint: address
-rewardDistributorBlueprint: address
-
+votingEscrowBlueprint: public(address)
+rewardDistributorBlueprint: public(address)
+votingEscrowRegister: public(HashMap[address, bool])
+rewardDistributorRegister: public(HashMap[address, bool])
 
 interface tokenInterface:
     def getOwner() -> address: view
@@ -12,12 +13,6 @@ def __init__(
 ):
     self.votingEscrowBlueprint = _votingEscrowBlueprint
     self.rewardDistributorBlueprint = _rewardDistributorBluePrint
-
-
-@external
-def getBlueprints() -> (address, address):
-    return (self.votingEscrowBlueprint, self.rewardDistributorBlueprint)
-
 
 @external
 def deploy(
@@ -38,5 +33,7 @@ def deploy(
         msg.sender,
         code_offset=3,
     )
+    self.votingEscrowRegister[_deployedVE] = True
+
     # _deployedRD: address = create_from_blueprint(self.rewardDistributorBlueprint, _deployedVE, _startRewardDistributorTime)
     return (_deployedVE, _tokenAddr)

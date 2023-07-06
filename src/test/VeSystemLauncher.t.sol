@@ -26,7 +26,7 @@ abstract contract HelperContract is Test {
     MyToken _bleu;
     MyToken _wETH;
 
-    uint256 public immutable YEAR = 365 * 86400;
+    uint256 public YEAR = 365 * 86400;
 
     WeightedPool internal _weightedPool;
 
@@ -104,7 +104,9 @@ abstract contract HelperContract is Test {
 contract VeSystemLauncherTest is HelperContract {
     IVeSystemFactory internal _veSystemFactory;
     IBleuVotingEscrow internal _votingEscrowBlueprint;
+    IBleuVotingEscrow internal _veBleu;
     IRewardDistributor internal _rewardDistributorBlueprint;
+    IRewardDistributor internal _rewardDistributorBleu;
 
     constructor() {
         _votingEscrowBlueprint = IBleuVotingEscrow(_vyperDeployer.deployBlueprint("VotingEscrowBlueprint"));
@@ -114,19 +116,32 @@ contract VeSystemLauncherTest is HelperContract {
                 "VeSystemFactory", abi.encode(address(_votingEscrowBlueprint), address(_rewardDistributorBlueprint))
             )
         );
+        (address _veBleuAddress, address _veBleuRewardAddress) = _veSystemFactory.deploy(address(_weightedPool), "Bleu", "BLEU", block.timestamp + YEAR);
+        _veBleu = IBleuVotingEscrow(_veBleuAddress);
+        _rewardDistributorBleu = IRewardDistributor(_veBleuRewardAddress);
     }
 
     function testBlueprints() public {
-        (address _blueprint1, address _blueprint2) = _veSystemFactory.getBlueprints();
-        assertEq(_blueprint1, address(_votingEscrowBlueprint));
-        assertEq(_blueprint2, address(_rewardDistributorBlueprint));
+        assertEq(_veSystemFactory.votingEscrowBlueprint(), address(_votingEscrowBlueprint));
+        assertEq(_veSystemFactory.rewardDistributorBlueprint(), address(_rewardDistributorBlueprint));
     }
 
-    function testDeploy() public {
-        (address _veBleuAddress, address _veBleuRewardAddress) =
-            _veSystemFactory.deploy(address(_weightedPool), "Bleu", "BLEU", block.timestamp + YEAR);
-        IBleuVotingEscrow _veBleu = IBleuVotingEscrow(_veBleuAddress);
+    function testDeployVotingEscrow() public {
+        assert(_veSystemFactory.votingEscrowRegister(address(_veBleu)));
         assertEq(_veBleu.token(), address(_weightedPool));
         assertEq(_veBleu.admin(), address(this));
+
+        assertEq(_veBleu.totalSupply(), 0);
+        uint256 _BPTBeforeLock = _weightedPool.balanceOf(address(this));
+
+        _weightedPool.approve(address(_veBleu), _BPTBeforeLock);
+        _veBleu.create_lock(_BPTBeforeLock, block.timestamp + YEAR);
+
+        assertEq(_weightedPool.balanceOf(address(this)), 0);
+        assertGt(_veBleu.totalSupply(), 0);
+        assertEq(_veBleu.totalSupply(block.timestamp + YEAR), 0);
+        _veBleu.checkpoint();
+
+        assertGt(_veBleu.balanceOf(address(this)), 0);
     }
 }
