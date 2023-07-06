@@ -110,7 +110,7 @@ admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
+def __init__(token_addr: address, _name: String[64], _symbol: String[32], admin_addr: address):
 # Balancer's implementation:
 # def __init__(token_addr: address, _name: String[64], _symbol: String[32], _authorizer_adaptor: address):
     """
@@ -125,7 +125,7 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
     TOKEN = token_addr
     # Balancer's implementation:
     # AUTHORIZER_ADAPTOR = _authorizer_adaptor
-    self.admin = msg.sender
+    self.admin = admin_addr
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
 

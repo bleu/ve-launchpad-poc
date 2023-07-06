@@ -4,12 +4,12 @@ pragma abicoder v2;
 
 import "forge-std/Test.sol";
 
-import "../../utils/VyperDeployer.sol";
-
 import "./helpers/MyToken.sol";
+import "../../utils/VyperDeployer.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
 import "../IVeSystemFactory.sol";
+
 import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 import "lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
 import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/test/MockBasicAuthorizer.sol";
@@ -117,11 +117,14 @@ contract VeSystemLauncherTest is HelperContract {
     }
 
     function testBlueprints() public {
-        (address blueprint1, address blueprint2) = _veSystemFactory.getBlueprints();
-        assertEq(blueprint1, address(_votingEscrowBlueprint));
+        (address _blueprint1, address _blueprint2) = _veSystemFactory.getBlueprints();
+        assertEq(_blueprint1, address(_votingEscrowBlueprint));
     }
 
-    // function testDeploy() public {
-    //     _veSystemFactory.deploy(address(_bleu), "Bleu", "BLEU", block.timestamp + YEAR);
-    // }
+    function testDeploy() public {
+        (address _veBleuAddress, address _veBleuRewardAddress) = _veSystemFactory.deploy(address(_weightedPool), "Bleu", "BLEU", block.timestamp + YEAR);
+        IBleuVotingEscrow _veBleu = IBleuVotingEscrow(_veBleuAddress);
+        assertEq(_veBleu.token(), address(_weightedPool));
+        assertEq(_veBleu.admin(), address(this));
+    }
 }
