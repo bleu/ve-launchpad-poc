@@ -11,6 +11,10 @@ python = ">=3.9,<3.11"
 vyper = "^0.3.7"
 
 
+[tool.poetry.group.dev.dependencies]
+mamushi = "^0.0.2a1"
+mypy-extensions = "^1.0.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

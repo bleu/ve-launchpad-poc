@@ -15,7 +15,6 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-// import "./IAuthorizerAdaptor.sol";
 import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/ISmartWalletChecker.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
 
@@ -30,8 +29,8 @@ interface IBleuVotingEscrow is IERC20 {
         uint256 ts;
         uint256 blk; // block
     }
-    function epoch() external view returns (uint256);
 
+    function epoch() external view returns (uint256);
     // function admin() external view returns (IAuthorizerAdaptor);
     function admin() external view returns (address);
     // function apply_smart_wallet_checker() external;

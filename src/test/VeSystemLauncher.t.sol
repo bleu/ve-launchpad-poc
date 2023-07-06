@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 
 import "../../utils/VyperDeployer.sol";
 
-import "../MyToken.sol";
+import "./helpers/MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
 import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
@@ -21,7 +21,6 @@ import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpe
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
-import "../MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IVeSystemFactory.sol";
 
