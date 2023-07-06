@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 
 import "../../utils/VyperDeployer.sol";
 
-import "../MyToken.sol";
+import "./helpers/MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
 import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
@@ -21,7 +21,6 @@ import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/helpers/ERC20Helpe
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/IVotingEscrow.sol";
 
-import "../MyToken.sol";
 import "../RewardDistributor.sol";
 import "../VeBPTFactory.sol";
 
@@ -72,9 +71,7 @@ abstract contract HelperContract is Test {
         _weightedPool = WeightedPool(weightedPoolAddress);
 
         _baseVotingEscrow = IBleuVotingEscrow(
-            _vyperDeployer.deployContract(
-                "VotingEscrow", abi.encode(_wETH, "Base Voting Escrowed", "veBASE")
-            )
+            _vyperDeployer.deployContract("VotingEscrow", abi.encode(_wETH, "Base Voting Escrowed", "veBASE"))
         );
 
         // _rewardDistributor = new RewardDistributor(_votingEscrow, 604800);
@@ -130,6 +127,4 @@ contract VeSystemLauncherTest is HelperContract {
     function testImplementations() public {
         assertEq(_veBPTFactory.getVotingEscrowImplementation(), address(_baseVotingEscrow));
     }
-
-
 }

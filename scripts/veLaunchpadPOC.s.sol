@@ -4,7 +4,7 @@ pragma solidity >=0.7.0 <0.9.0;
 import "forge-std/Script.sol";
 import "../utils/VyperDeployer.sol";
 import "../src/IVotingEscrow.sol";
-import "../src/MyToken.sol";
+import "../test/helpers/MyToken.sol";
 
 contract Deploy is Script {
     MyToken token;

@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "lint": "solhint \"{src,utils,scripts}/**/*.sol\"",
+    "lint:fix": "solhint \"{src,utils,scripts}/**/*.sol\" --fix",
+    "vyper:format": "poetry shell && poetry install && mamushi vyper_contracts"
+  },
+  "dependencies": {
+    "solhint": "^3.4.1"
+  }
+}

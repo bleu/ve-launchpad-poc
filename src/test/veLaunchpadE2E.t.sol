@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 
 import "../../utils/VyperDeployer.sol";
 
-import "../MyToken.sol";
+import "./helpers/MyToken.sol";
 import "../RewardDistributor.sol";
 import "../IBleuVotingEscrow.sol";
 import "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
