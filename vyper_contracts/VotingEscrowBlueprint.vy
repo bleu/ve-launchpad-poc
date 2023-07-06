@@ -1,4 +1,5 @@
 # @version 0.3.7
+
 """
 @title Voting Escrow
 @author Curve Finance
@@ -23,17 +24,21 @@
 #       maxtime (1 year?)
 
 struct Point:
-    bias: int128
-    slope: int128  # - dweight / dt
-    ts: uint256
-    blk: uint256  # block
+        bias: int128
+        slope: int128
+    # - dweight / dt
+        ts: uint256
+        blk: uint256
+    # block
+
+
 # We cannot really do block numbers per se b/c slope is per time, not per block
 # and per block could be fairly bad b/c Ethereum changes blocktimes.
 # What we can do is to extrapolate ***At functions
 
 struct LockedBalance:
-    amount: int128
-    end: uint256
+        amount: int128
+        end: uint256
 
 
 interface ERC20:
@@ -41,7 +46,9 @@ interface ERC20:
     def name() -> String[64]: view
     def symbol() -> String[32]: view
     def transfer(to: address, amount: uint256) -> bool: nonpayable
-    def transferFrom(spender: address, to: address, amount: uint256) -> bool: nonpayable
+    def transferFrom(
+        spender: address, to: address, amount: uint256
+    ) -> bool: nonpayable
 
 
 # Interface for checking whether address belongs to a whitelisted
@@ -52,16 +59,20 @@ interface ERC20:
 interface SmartWalletChecker:
     def check(addr: address) -> bool: nonpayable
 
+
 DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
 
+
 event CommitOwnership:
     admin: address
 
+
 event ApplyOwnership:
     admin: address
+
 
 event Deposit:
     provider: indexed(address)
@@ -70,10 +81,12 @@ event Deposit:
     type: int128
     ts: uint256
 
+
 event Withdraw:
     provider: indexed(address)
     value: uint256
     ts: uint256
+
 
 event Supply:
     prevSupply: uint256
@@ -82,7 +95,7 @@ event Supply:
 
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 365 * 86400  # 1 year
-MULTIPLIER: constant(uint256) = 10 ** 18
+MULTIPLIER: constant(uint256) = 10**18
 
 TOKEN: immutable(address)
 # From Balancer's implementation:
@@ -96,8 +109,12 @@ supply: public(uint256)
 locked: public(HashMap[address, LockedBalance])
 
 epoch: public(uint256)
-point_history: public(Point[100000000000000000000000000000])  # epoch -> unsigned point
-user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point[user_epoch]
+point_history: public(
+    Point[100000000000000000000000000000]
+)  # epoch -> unsigned point
+user_point_history: public(
+    HashMap[address, Point[1000000000]]
+)  # user -> Point[user_epoch]
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 
@@ -109,10 +126,16 @@ smart_wallet_checker: public(address)
 admin: public(address)  # Can and will be a smart contract
 future_admin: public(address)
 
+
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], admin_addr: address):
-# Balancer's implementation:
-# def __init__(token_addr: address, _name: String[64], _symbol: String[32], _authorizer_adaptor: address):
+def __init__(
+    token_addr: address,
+    _name: String[64],
+    _symbol: String[32],
+    admin_addr: address,
+):
+    # Balancer's implementation:
+    # def __init__(token_addr: address, _name: String[64], _symbol: String[32], _authorizer_adaptor: address):
     """
     @notice Contract constructor
     @param token_addr 80/20 BAL-WETH BPT token address
@@ -136,25 +159,30 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], admin_
     SYMBOL = _symbol
     DECIMALS = _decimals
 
+
 @external
 @view
 def token() -> address:
     return TOKEN
+
 
 @external
 @view
 def name() -> String[64]:
     return NAME
 
+
 @external
 @view
 def symbol() -> String[32]:
     return SYMBOL
 
+
 @external
 @view
 def decimals() -> uint256:
     return DECIMALS
+
 
 # Balancer's implementation:
 # @external
@@ -173,6 +201,7 @@ def commit_transfer_ownership(addr: address):
     self.future_admin = addr
     log CommitOwnership(addr)
 
+
 @external
 def apply_transfer_ownership():
     """
@@ -183,7 +212,9 @@ def apply_transfer_ownership():
     assert _admin != empty(address)  # dev: admin not set
     self.admin = _admin
     log ApplyOwnership(_admin)
-#endregion
+
+
+# endregion
 
 @external
 def commit_smart_wallet_checker(addr: address):
@@ -260,7 +291,9 @@ def locked__end(_addr: address) -> uint256:
 
 
 @internal
-def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance):
+def _checkpoint(
+    addr: address, old_locked: LockedBalance, new_locked: LockedBalance
+):
     """
     @notice Record global and per-user data to checkpoint
     @param addr User's wallet address. No user checkpoint if 0x0
@@ -278,10 +311,15 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         # Kept at zero when they have to
         if old_locked.end > block.timestamp and old_locked.amount > 0:
             u_old.slope = old_locked.amount / convert(MAXTIME, int128)
-            u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
+            u_old.bias = u_old.slope * convert(
+                old_locked.end - block.timestamp, int128
+            )
         if new_locked.end > block.timestamp and new_locked.amount > 0:
             u_new.slope = new_locked.amount / convert(MAXTIME, int128)
-            u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
+            u_new.bias = u_new.slope * convert(
+                new_locked.end - block.timestamp, int128
+            )
+
 
         # Read values of scheduled changes in the slope
         # old_locked.end can be in the past and in the future
@@ -292,8 +330,9 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
                 new_dslope = old_dslope
             else:
                 new_dslope = self.slope_changes[new_locked.end]
-
-    last_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number})
+    last_point: Point = Point(
+        {bias: 0, slope: 0, ts: block.timestamp, blk: block.number}
+    )
     if _epoch > 0:
         last_point = self.point_history[_epoch]
     last_checkpoint: uint256 = last_point.ts
@@ -303,11 +342,13 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     initial_last_point: Point = last_point
     block_slope: uint256 = 0  # dblock/dt
     if block.timestamp > last_point.ts:
-        block_slope = MULTIPLIER * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
+        block_slope = (
+            MULTIPLIER
+            * (block.number - last_point.blk)
+            / (block.timestamp - last_point.ts)
+        )
     # If last point is already recorded in this block, slope=0
     # But that's ok b/c we know the block in such case
-
-    # Go over weeks to fill history and calculate what the current point is
     t_i: uint256 = (last_checkpoint / WEEK) * WEEK
     for i in range(255):
         # Hopefully it won't happen that this won't get used in 5 years!
@@ -318,7 +359,9 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
             t_i = block.timestamp
         else:
             d_slope = self.slope_changes[t_i]
-        last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
+        last_point.bias -= last_point.slope * convert(
+            t_i - last_checkpoint, int128
+        )
         last_point.slope += d_slope
         if last_point.bias < 0:  # This can happen
             last_point.bias = 0
@@ -326,14 +369,16 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
             last_point.slope = 0
         last_checkpoint = t_i
         last_point.ts = t_i
-        last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER
+        last_point.blk = (
+            initial_last_point.blk
+            + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER
+        )
         _epoch += 1
         if t_i == block.timestamp:
             last_point.blk = block.number
             break
         else:
             self.point_history[_epoch] = last_point
-
     self.epoch = _epoch
     # Now point_history is filled until t=now
 
@@ -367,6 +412,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
                 self.slope_changes[new_locked.end] = new_dslope
             # else: we recorded it already in old_dslope
 
+
         # Now handle user history
         user_epoch: uint256 = self.user_point_epoch[addr] + 1
 
@@ -377,7 +423,13 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
 
 
 @internal
-def _deposit_for(_addr: address, _value: uint256, unlock_time: uint256, locked_balance: LockedBalance, type: int128):
+def _deposit_for(
+    _addr: address,
+    _value: uint256,
+    unlock_time: uint256,
+    locked_balance: LockedBalance,
+    type: int128,
+):
     """
     @notice Deposit and lock tokens for a user
     @param _addr User's wallet address
@@ -418,7 +470,7 @@ def checkpoint():
 
 
 @external
-@nonreentrant('lock')
+@nonreentrant("lock")
 def deposit_for(_addr: address, _value: uint256):
     """
     @notice Deposit `_value` tokens for `_addr` and add to the lock
@@ -437,7 +489,7 @@ def deposit_for(_addr: address, _value: uint256):
 
 
 @external
-@nonreentrant('lock')
+@nonreentrant("lock")
 def create_lock(_value: uint256, _unlock_time: uint256):
     """
     @notice Deposit `_value` tokens for `msg.sender` and lock until `_unlock_time`
@@ -445,19 +497,27 @@ def create_lock(_value: uint256, _unlock_time: uint256):
     @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
     """
     self.assert_not_contract(msg.sender)
-    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
+    unlock_time: uint256 = (
+        _unlock_time / WEEK
+    ) * WEEK  # Locktime is rounded down to weeks
     _locked: LockedBalance = self.locked[msg.sender]
 
     assert _value > 0  # dev: need non-zero value
     assert _locked.amount == 0, "Withdraw old tokens first"
-    assert unlock_time > block.timestamp, "Can only lock until time in the future"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 1 year max"
+    assert (
+        unlock_time > block.timestamp
+    ), "Can only lock until time in the future"
+    assert (
+        unlock_time <= block.timestamp + MAXTIME
+    ), "Voting lock can be 1 year max"
 
-    self._deposit_for(msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
+    self._deposit_for(
+        msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE
+    )
 
 
 @external
-@nonreentrant('lock')
+@nonreentrant("lock")
 def increase_amount(_value: uint256):
     """
     @notice Deposit `_value` additional tokens for `msg.sender`
@@ -475,7 +535,7 @@ def increase_amount(_value: uint256):
 
 
 @external
-@nonreentrant('lock')
+@nonreentrant("lock")
 def increase_unlock_time(_unlock_time: uint256):
     """
     @notice Extend the unlock time for `msg.sender` to `_unlock_time`
@@ -483,18 +543,22 @@ def increase_unlock_time(_unlock_time: uint256):
     """
     self.assert_not_contract(msg.sender)
     _locked: LockedBalance = self.locked[msg.sender]
-    unlock_time: uint256 = (_unlock_time / WEEK) * WEEK  # Locktime is rounded down to weeks
+    unlock_time: uint256 = (
+        _unlock_time / WEEK
+    ) * WEEK  # Locktime is rounded down to weeks
 
     assert _locked.end > block.timestamp, "Lock expired"
     assert _locked.amount > 0, "Nothing is locked"
     assert unlock_time > _locked.end, "Can only increase lock duration"
-    assert unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 1 year max"
+    assert (
+        unlock_time <= block.timestamp + MAXTIME
+    ), "Voting lock can be 1 year max"
 
     self._deposit_for(msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME)
 
 
 @external
-@nonreentrant('lock')
+@nonreentrant("lock")
 def withdraw():
     """
     @notice Withdraw all tokens for `msg.sender`
@@ -548,6 +612,7 @@ def find_block_epoch(_block: uint256, max_epoch: uint256) -> uint256:
             _max = _mid - 1
     return _min
 
+
 @internal
 @view
 def find_timestamp_epoch(_timestamp: uint256, max_epoch: uint256) -> uint256:
@@ -570,9 +635,12 @@ def find_timestamp_epoch(_timestamp: uint256, max_epoch: uint256) -> uint256:
             _max = _mid - 1
     return _min
 
+
 @internal
 @view
-def find_block_user_epoch(_addr: address, _block: uint256, max_epoch: uint256) -> uint256:
+def find_block_user_epoch(
+    _addr: address, _block: uint256, max_epoch: uint256
+) -> uint256:
     """
     @notice Binary search to find epoch for block number
     @param _addr User for which to find user epoch for
@@ -593,9 +661,12 @@ def find_block_user_epoch(_addr: address, _block: uint256, max_epoch: uint256) -
             _max = _mid - 1
     return _min
 
+
 @internal
 @view
-def find_timestamp_user_epoch(_addr: address, _timestamp: uint256, max_epoch: uint256) -> uint256:
+def find_timestamp_user_epoch(
+    _addr: address, _timestamp: uint256, max_epoch: uint256
+) -> uint256:
     """
     @notice Binary search to find user epoch for timestamp
     @param _addr User for which to find user epoch for
@@ -616,6 +687,7 @@ def find_timestamp_user_epoch(_addr: address, _timestamp: uint256, max_epoch: ui
             _max = _mid - 1
     return _min
 
+
 @external
 @view
 def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
@@ -631,13 +703,17 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
         # No need to do binary search, will always live in current epoch
         _epoch = self.user_point_epoch[addr]
     else:
-        _epoch = self.find_timestamp_user_epoch(addr, _t, self.user_point_epoch[addr])
+        _epoch = self.find_timestamp_user_epoch(
+            addr, _t, self.user_point_epoch[addr]
+        )
 
     if _epoch == 0:
         return 0
     else:
         last_point: Point = self.user_point_history[addr][_epoch]
-        last_point.bias -= last_point.slope * convert(_t - last_point.ts, int128)
+        last_point.bias -= last_point.slope * convert(
+            _t - last_point.ts, int128
+        )
         if last_point.bias < 0:
             last_point.bias = 0
         return convert(last_point.bias, uint256)
@@ -657,7 +733,9 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     # reference yet
     assert _block <= block.number
 
-    _user_epoch: uint256 = self.find_block_user_epoch(addr, _block, self.user_point_epoch[addr])
+    _user_epoch: uint256 = self.find_block_user_epoch(
+        addr, _block, self.user_point_epoch[addr]
+    )
     upoint: Point = self.user_point_history[addr][_user_epoch]
 
     max_epoch: uint256 = self.epoch
@@ -701,7 +779,9 @@ def supply_at(point: Point, t: uint256) -> uint256:
             t_i = t
         else:
             d_slope = self.slope_changes[t_i]
-        last_point.bias -= last_point.slope * convert(t_i - last_point.ts, int128)
+        last_point.bias -= last_point.slope * convert(
+            t_i - last_point.ts, int128
+        )
         if t_i == t:
             break
         last_point.slope += d_slope
@@ -751,10 +831,19 @@ def totalSupplyAt(_block: uint256) -> uint256:
     if target_epoch < _epoch:
         point_next: Point = self.point_history[target_epoch + 1]
         if point.blk != point_next.blk:
-            dt = (_block - point.blk) * (point_next.ts - point.ts) / (point_next.blk - point.blk)
+            dt = (
+                (_block - point.blk)
+                * (point_next.ts - point.ts)
+                / (point_next.blk - point.blk)
+            )
     else:
         if point.blk != block.number:
-            dt = (_block - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk)
-    # Now dt contains info on how far are we beyond point
+            dt = (
+                (_block - point.blk)
+                * (block.timestamp - point.ts)
+                / (block.number - point.blk)
+            )
+        # Now dt contains info on how far are we beyond point
+
 
     return self.supply_at(point, point.ts + dt)
