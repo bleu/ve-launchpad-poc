@@ -84,18 +84,13 @@ WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 365 * 86400  # 1 year
 MULTIPLIER: constant(uint256) = 10 ** 18
 
+TOKEN: immutable(address)
 # From Balancer's implementation:
-# TOKEN: immutable(address)
 # AUTHORIZER_ADAPTOR: immutable(address) # Authorizer Adaptor
-# NAME: immutable(String[64])
-# SYMBOL: immutable(String[32])
-# DECIMALS: immutable(uint256)
 
-# Just modified in the initializer function
-TOKEN: address
-NAME: String[64]
-SYMBOL: String[32]
-DECIMALS: uint256
+NAME: immutable(String[64])
+SYMBOL: immutable(String[32])
+DECIMALS: immutable(uint256)
 
 
 supply: public(uint256)
@@ -139,28 +134,22 @@ future_admin: public(address)
 #     DECIMALS = _decimals
 
 @external
-def __init__():
+def __init__(token_addr: address, _name: String[64], _symbol: String[32]):
     """
     @notice Contract constructor
-    """
-
-    TOKEN = token_addr
-    self.admin = tsx.origin
-    self.point_history[0].blk = block.number
-    self.point_history[0].ts = block.timestamp
-
-
-@external
-def initialize(token_addr: address, _name: String[64], _symbol: String[32]):
-    """
-    @notice Contract initializer
     @param token_addr 80/20 BAL-WETH BPT token address
     @param _name Token name
     @param _symbol Token symbol
     """
+
+    TOKEN = token_addr
+    self.admin = msg.sender
+    self.point_history[0].blk = block.number
+    self.point_history[0].ts = block.timestamp
+
     _decimals: uint256 = ERC20(token_addr).decimals()
-    # TODO: Just be called once for the factory
     assert _decimals <= 255
+
     NAME = _name
     SYMBOL = _symbol
     DECIMALS = _decimals  
@@ -168,22 +157,22 @@ def initialize(token_addr: address, _name: String[64], _symbol: String[32]):
 @external
 @view
 def token() -> address:
-    return self.TOKEN
+    return TOKEN
 
 @external
 @view
 def name() -> String[64]:
-    return self.NAME
+    return NAME
 
 @external
 @view
 def symbol() -> String[32]:
-    return self.SYMBOL
+    return SYMBOL
 
 @external
 @view
 def decimals() -> uint256:
-    return self.DECIMALS
+    return DECIMALS
 
 # Balancer's implementation:
 # @external
