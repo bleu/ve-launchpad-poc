@@ -1,142 +1,21 @@
-# Foundry x Vyper
+# veLaunchpad PoC
 
-A Foundry template to compile and test Vyper contracts.
+Welcome to the Bleu veLaunchpad PoC repository, an exciting initiative that aims to facilitate the way to create a voting escrow system for any ERC20 token. This project is based on [this RFP](https://quark-ceres-740.notion.site/veTokenomic-Launchpad-d8dcd8cc5ba84475bd654345c8506eda).
 
-```
+The primary objective of veLaunchpad is to provide a comprehensive solution for launching a veERC20 tokens. The use case covered by the PoC is to create two main contracts, via one Factory, for each new veSystem:
+- Voting Escrow: This contract is used to lock BPT and receive the veERC20 in exchange based on Balancer implementation.
+- RewardDistributor: Similar to the Balancer Fee Distributor, this reward distributor allows users to deposit rewards to be claimed for anyone that has veERC20 tokens.
 
-                       ,,,,,,,,,,,,,                        ,,,,,,,,,,,,
-                        *********///.         ////        ,//**********
-                         ,****,*//////       //////      //////******.
-                           ****////////    /////////    ////////****
-                            *//////////// /////////// ////////////*
-                              //////////##///////////#(//////////
-                               ////////####(///////(####////////
-                                ,////(#######/////#######(////
-                                  //##########//(##########//
-                                   (###########&###########*
-                                     #########&&&#########
-                                      ######&&&&&&&#####(
-                                        ###&&&&&&&&&###
-                                         %&&&&&&&&&&&%
-                                          %&&&&&&&&&.
-                                            &&&&&&&
-                                             %&&&*
-                                               &
-
-  ```
-
-<br>
-
-
-# Installation / Setup
-
-To set up Foundry x Vyper, first make sure you have [Vyper](https://vyper.readthedocs.io/en/stable/installing-vyper.html) installed.
-
-Then set up a new Foundry project with the following command (replacing `vyper_project_name` with your new project's name).
+If you want to test our PoC, run the following commands for a local test:
 
 ```
-forge init --template https://github.com/0xKitsune/Foundry-Vyper vyper_project_name
+forge test -vvvvv --match-contract VeSystemLauncherTest
 ```
 
-
-Now you are all set up and ready to go! Below is a quick example of how to set up, deploy and test Vyper contracts.
-
-
-<br>
-<br>
-
-
-# Compiling/Testing Vyper Contracts
-
-The DeploymentHelper is a pre-built contract that takes a filename and deploys the corresponding Vyper contract, returning the address that the bytecode was deployed to. If you want, you can check out [how the DeploymentHelper works under the hood](https://github.com/0xKitsune/Foundry-Vyper/blob/main/lib/utils/DeploymentHelper.sol). Below is a quick example of how to setup and deploy a SimpleStore contract written in Vyper.
-
-
-## SimpleStore.Vyper
-
-Here is a simple Vyper contract called `SimpleStore.Vyper`, which is stored within the `Vyper_contracts` directory. Make sure to put all of your `.Vyper` files in the `Vyper_contracts` directory so that the Vyper compiler knows where to look when compiling.
-
-```py
-val: uint256
-
-@external
-def store(_val: uint256):
-    self.val = _val
-
-@external
-def get() -> uint256:
-    return self.val
+Or if you want to run the test integrated with the Balancer infrastructure on one testnet:
 
 ```
-
-<br>
-
-
-## SimpleStore Interface
-
-Next, you will need to create an interface for your contract. This will allow Foundry to interact with your Vyper contract, enabling the full testing capabilities that Foundry has to offer.
-
-```js
-
-interface SimpleStore {
-    function store(uint256 val) external;
-    function get() external returns (uint256);
-}
+forge test -vvvvv --match-contract VeSystemLauncherSepoliaTest --rpc-url https://rpc.sepolia.org
 ```
 
-<br>
-
-
-## SimpleStore Test
-
-First, the file imports `ISimpleStore.sol` as well as the `DeploymentHelper.sol` contract.
-
-To deploy the contract, simply create a new instance of `DeploymentHelper` and call `DeploymentHelper.deployContract(fileName)` method, passing in the file name of the contract you want to deploy. Additionally, if the contract requires constructor arguments you can pass them in by supplying an abi encoded representation of the constructor arugments, which looks like this `DeploymentHelper.deployContract(fileName, abi.encode(arg0, arg1, arg2...))`.
-
-In this example, `SimpleStore` is passed in to deploy the `SimpleStore.vy` contract. The `deployContract` function compiles the Vyper contract and deploys the newly compiled bytecode, returning the address that the contract was deployed to. Since the `SimpleStore.vy` takes one constructor argument, the argument is wrapped in `abi.encode()` and passed to the `deployContract` function as a second argument.
-
-The deployed address is then used to initialize the ISimpleStore interface. Once the interface has been initialized, your Vyper contract can be used within Foundry like any other Solidity contract.
-
-To test any Vyper contract deployed with DeploymentHelper, simply run `forge test`. Since `ffi` is set to `true` in the `foundry.toml` file, you can run `forge test` without needing to pass in the `--ffi` flag. You can also use additional flags as you would with any other Foundry project. For example: `forge test -f <url> -vvvv`.
-
-```js
-import "../../lib/ds-test/test.sol";
-import "../../lib/utils/DeploymentHelper.sol";
-
-import "../ISimpleStore.sol";
-
-contract SimpleStoreTest is DSTest {
-    ///@notice create a new instance of DeploymentHelper
-    DeploymentHelper DeploymentHelper = new DeploymentHelper();
-
-    ISimpleStore simpleStore;
-
-    function setUp() public {
-        ///@notice deploy a new instance of ISimplestore by passing in the address of the deployed Vyper contract
-        simpleStore = ISimpleStore(
-            DeploymentHelper.deployContract("SimpleStore", abi.encode(1234))
-        );
-    }
-
-    function testGet() public {
-        uint256 val = simpleStore.get();
-
-        require(val == 1234);
-    }
-
-    function testStore(uint256 _val) public {
-        simpleStore.store(_val);
-        uint256 val = simpleStore.get();
-
-        require(_val == val);
-    }
-}
-
-```
-
-
-<br>
-
-# Other Foundry Integrations
-
-- [Foundry-Yul+](https://github.com/ControlCplusControlV/Foundry-Yulp)
-- [Foundry-Huff](https://github.com/0xKitsune/Foundry-Huff)
+**Note:** This repository is a PoC with some simplifications. Feel free to open an issue with the parameters that you think would be useful to customize in each veSystem.
