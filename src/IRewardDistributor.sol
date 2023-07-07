@@ -16,7 +16,7 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 // BLEU CHANGE
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
+import "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/openzeppelin/ERC20.sol";
 
 import "./IBleuVotingEscrow.sol";
 
@@ -28,8 +28,17 @@ import "./IBleuVotingEscrow.sol";
  * holders simply transfer the tokens to the `FeeDistributor` contract and then call `checkpointToken`.
  */
 interface IRewardDistributor {
-    event TokenCheckpointed(IERC20 token, uint256 amount, uint256 lastCheckpointTimestamp);
-    event TokensClaimed(address user, IERC20 token, uint256 amount, uint256 userTokenTimeCursor);
+    event TokenCheckpointed(
+        IERC20 token,
+        uint256 amount,
+        uint256 lastCheckpointTimestamp
+    );
+    event TokensClaimed(
+        address user,
+        IERC20 token,
+        uint256 amount,
+        uint256 userTokenTimeCursor
+    );
 
     /**
      * @notice Returns the VotingEscrow (veBAL) token contract
@@ -58,7 +67,10 @@ interface IRewardDistributor {
      * @param user - The address of the user to query.
      * @param token - The ERC20 token address to query.
      */
-    function getUserTokenTimeCursor(address user, IERC20 token) external view returns (uint256);
+    function getUserTokenTimeCursor(
+        address user,
+        IERC20 token
+    ) external view returns (uint256);
 
     /**
      * @notice Returns the user's cached balance of veBAL as of the provided timestamp.
@@ -67,7 +79,10 @@ interface IRewardDistributor {
      * @param user - The address of the user of which to read the cached balance of.
      * @param timestamp - The timestamp at which to read the `user`'s cached balance at.
      */
-    function getUserBalanceAtTimestamp(address user, uint256 timestamp) external view returns (uint256);
+    function getUserBalanceAtTimestamp(
+        address user,
+        uint256 timestamp
+    ) external view returns (uint256);
 
     /**
      * @notice Returns the cached total supply of veBAL as of the provided timestamp.
@@ -75,7 +90,9 @@ interface IRewardDistributor {
      * This function requires the contract to have been checkpointed past `timestamp` so that the supply is cached.
      * @param timestamp - The timestamp at which to read the cached total supply at.
      */
-    function getTotalSupplyAtTimestamp(uint256 timestamp) external view returns (uint256);
+    function getTotalSupplyAtTimestamp(
+        uint256 timestamp
+    ) external view returns (uint256);
 
     /**
      * @notice Returns the FeeDistributor's cached balance of `token`.
@@ -87,7 +104,10 @@ interface IRewardDistributor {
      * @param token - The ERC20 token address to query.
      * @param timestamp - The timestamp corresponding to the beginning of the week of interest.
      */
-    function getTokensDistributedInWeek(IERC20 token, uint256 timestamp) external view returns (uint256);
+    function getTokensDistributedInWeek(
+        IERC20 token,
+        uint256 timestamp
+    ) external view returns (uint256);
 
     // Depositing
 
@@ -110,7 +130,10 @@ interface IRewardDistributor {
      * @param tokens - An array of ERC20 token addresses to distribute.
      * @param amounts - An array of token amounts to deposit.
      */
-    function depositTokens(IERC20[] calldata tokens, uint256[] calldata amounts) external;
+    function depositTokens(
+        IERC20[] calldata tokens,
+        uint256[] calldata amounts
+    ) external;
 
     // Checkpointing
 
@@ -165,5 +188,8 @@ interface IRewardDistributor {
      * @param tokens - An array of ERC20 token addresses to be claimed.
      * @return An array of the amounts of each token in `tokens` sent to `user` as a result of claiming.
      */
-    function claimTokens(address user, IERC20[] calldata tokens) external returns (uint256[] memory);
+    function claimTokens(
+        address user,
+        IERC20[] calldata tokens
+    ) external returns (uint256[] memory);
 }

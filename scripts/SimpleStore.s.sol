@@ -2,21 +2,21 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "forge-std/Script.sol";
-import "../utils/VyperDeployer.sol";
+import "../utils/DeploymentHelper.sol";
 
 contract Deploy is Script {
     function run() external {
-        VyperDeployer vyperDeployer = new VyperDeployer();
+        DeploymentHelper DeploymentHelper = new DeploymentHelper();
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        vyperDeployer.deployContract("SimpleStore", abi.encode(1234));
+        DeploymentHelper.deployContract("SimpleStore", abi.encode(1234));
 
-        vyperDeployer.deployBlueprint("ExampleBlueprint");
+        DeploymentHelper.deployBlueprint("ExampleBlueprint");
 
-        vyperDeployer.deployContract("SimpleStoreFactory");
+        DeploymentHelper.deployContract("SimpleStoreFactory");
 
         vm.stopBroadcast();
     }

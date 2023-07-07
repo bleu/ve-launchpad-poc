@@ -5,23 +5,49 @@ pragma abicoder v2;
 import "forge-std/Test.sol";
 
 import "./helpers/MyToken.sol";
+import "../RewardDistributor.sol";
+import "../IBleuVotingEscrow.sol";
+import "../IVeSystemFactory.sol";
+
+import {
+    WeightedPoolFactory
+} from "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 import {
     ContractDeploymentHelper,
     TestTokensHelper,
     LocalBalancerDeploymentEnvironment,
-    WeightedPoolCreatorHelper
+    WeightedPoolCreatorHelper,
+    BalancerDeploymentEnvironment
 } from "./helpers/E2EHelpers.sol";
+import {
+    WeightedPool
+} from "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPool.sol";
 
-import "../RewardDistributor.sol";
-import "../IBleuVotingEscrow.sol";
-import "../IVeSystemFactory.sol";
 import {
     WeightedPoolUserData
 } from "lib/balancer-v2-monorepo/pkg/interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
+import {
+    IVault,
+    Vault,
+    IWETH
+} from "lib/balancer-v2-monorepo/pkg/vault/contracts/Vault.sol";
+import {
+    WeightedPoolFactory
+} from "lib/balancer-v2-monorepo/pkg/pool-weighted/contracts/WeightedPoolFactory.sol";
 
-contract VeSystemLauncherTest is
+contract SepoliaBalancerDeploymentEnvironment is BalancerDeploymentEnvironment {
+    constructor() {
+        _vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+        _weightedPoolFactory = WeightedPoolFactory(
+            0x7920BFa1b2041911b354747CA7A6cDD2dfC50Cfd
+        );
+
+    }
+}
+
+contract VeSystemLauncherSepoliaTest is
     Test,
-    LocalBalancerDeploymentEnvironment,
+    SepoliaBalancerDeploymentEnvironment,
     WeightedPoolCreatorHelper,
     ContractDeploymentHelper
 {
@@ -146,12 +172,12 @@ contract VeSystemLauncherTest is
         vm.stopPrank();
 
         // One week later, admin deposits 90 RewardToken in RewardDistributor;
-        vm.warp(WEEK + 1);
+        vm.warp(WEEK + block.timestamp);
         _bleu.approve(address(_rewardDistributorBleu), 90e18);
         _rewardDistributorBleu.depositToken(_bleu, 90e18);
         _rewardDistributorBleu.checkpoint();
 
-        vm.warp(WEEK * 2);
+        vm.warp((WEEK * 2) + block.timestamp);
 
         // Two weeks later, bob and alice claims tokens;
         _rewardDistributorBleu.claimToken(alice, _bleu);

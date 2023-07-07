@@ -15,8 +15,12 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-interfaces/contracts/liquidity-mining/ISmartWalletChecker.sol";
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
+import {
+    ISmartWalletChecker
+} from "lib/balancer-v2-monorepo/pkg/interfaces/contracts/liquidity-mining/ISmartWalletChecker.sol";
+import {
+    IERC20
+} from "lib/balancer-v2-monorepo/pkg/solidity-utils/contracts/openzeppelin/ERC20.sol";
 
 // For compatibility, we're keeping the same function names as in the original Curve code, including the mixed-case
 // naming convention.
@@ -31,37 +35,79 @@ interface IBleuVotingEscrow is IERC20 {
     }
 
     function epoch() external view returns (uint256);
+
     // function admin() external view returns (IAuthorizerAdaptor);
     function admin() external view returns (address);
+
     // function apply_smart_wallet_checker() external;
     function apply_smart_wallet_checker() external;
+
     function apply_transfer_ownership() external;
+
     // function balanceOf(address addr, uint256 _t) external view returns (uint256);
-    function balanceOf(address user, uint256 timestamp) external view returns (uint256);
-    function balanceOfAt(address addr, uint256 _block) external view returns (uint256);
+    function balanceOf(
+        address user,
+        uint256 timestamp
+    ) external view returns (uint256);
+
+    function balanceOfAt(
+        address addr,
+        uint256 _block
+    ) external view returns (uint256);
+
     // function checkpoint() external;
     function checkpoint() external;
+
     // function commit_smart_wallet_checker(address addr) external;
-    function commit_smart_wallet_checker(address newSmartWalletChecker) external;
+    function commit_smart_wallet_checker(
+        address newSmartWalletChecker
+    ) external;
+
     function commit_transfer_ownership(address addr) external;
+
     function create_lock(uint256 _value, uint256 _unlock_time) external;
+
     function decimals() external view returns (uint256);
+
     function deposit_for(address _addr, uint256 _value) external;
+
     function get_last_user_slope(address addr) external view returns (int128);
+
     function increase_amount(uint256 _value) external;
+
     function increase_unlock_time(uint256 _unlock_time) external;
+
     // function locked__end(address _addr) external view returns (uint256);
     function locked__end(address user) external view returns (uint256);
+
     function name() external view returns (string memory);
-    function point_history(uint256 timestamp) external view returns (Point memory);
+
+    function point_history(
+        uint256 timestamp
+    ) external view returns (Point memory);
+
     function smart_wallet_checker() external view returns (ISmartWalletChecker);
+
     function symbol() external view returns (string memory);
+
     function token() external view returns (address);
+
     // function totalSupply(uint256 t) external view returns (uint256);
     function totalSupply(uint256 timestamp) external view returns (uint256);
+
     function totalSupplyAt(uint256 _block) external view returns (uint256);
+
     function user_point_epoch(address user) external view returns (uint256);
-    function user_point_history__ts(address _addr, uint256 _idx) external view returns (uint256);
-    function user_point_history(address user, uint256 timestamp) external view returns (Point memory);
+
+    function user_point_history__ts(
+        address _addr,
+        uint256 _idx
+    ) external view returns (uint256);
+
+    function user_point_history(
+        address user,
+        uint256 timestamp
+    ) external view returns (Point memory);
+
     function withdraw() external;
 }
