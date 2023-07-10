@@ -57,6 +57,9 @@ abstract contract VeLaunchpadTest is
     IRewardDistributor internal _rewardDistributorBlueprint;
     IRewardDistributor internal _rewardDistributorBleu;
 
+    // string internal _testChainAlias;
+    // StdChains internal _testChains;
+
     constructor() {
         _votingEscrowBlueprint = IBleuVotingEscrow(
             _deploymentHelper.deployVyperBlueprint("VotingEscrowBlueprint")
@@ -87,6 +90,13 @@ abstract contract VeLaunchpadTest is
             );
         _veBleu = IBleuVotingEscrow(_veBleuAddress);
         _rewardDistributorBleu = IRewardDistributor(_veBleuRewardAddress);
+
+        // Select the chain to run the test, if it's specified
+        // if (bytes(_testChainAlias).length != 0) {
+        //     string memory rpcUrl = getChain(_testChainAlias).rpcUrl;
+        //     vm.createSelectFork(rpcUrl);
+        // }
+
     }
 
     function testBlueprints() public {
@@ -196,5 +206,19 @@ abstract contract VeLaunchpadTest is
 /* solhint-enable not-rely-on-time */
 
 contract VeLaunchpadLocalTest is LocalBalancerDeploymentEnvironment, VeLaunchpadTest {
+    constructor() {}
+}
+
+
+abstract contract SepoliaBalancerDeploymentEnvironment is Test, BalancerDeploymentEnvironment {
+    constructor() {
+        _vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+        _weightedPoolFactory = WeightedPoolFactory(
+            0x7920BFa1b2041911b354747CA7A6cDD2dfC50Cfd
+        );
+    }
+}
+
+contract VeLaunchpadSepoliaTest is SepoliaBalancerDeploymentEnvironment, VeLaunchpadTest {
     constructor() {}
 }
