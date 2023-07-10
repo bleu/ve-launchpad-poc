@@ -64,6 +64,7 @@ abstract contract VeLaunchpadTest is
         _votingEscrowBlueprint = IBleuVotingEscrow(
             _deploymentHelper.deployVyperBlueprint("VotingEscrowBlueprint")
         );
+
         _rewardDistributorBlueprint = IRewardDistributor(
             _deploymentHelper.deploySolidityBlueprint(
                 "RewardDistributor.sol:RewardDistributor"
