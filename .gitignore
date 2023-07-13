@@ -384,8 +384,9 @@ pyrightconfig.json
 cache
 out
 
-# !broadcast/VeLaunchpad.s.sol/11155111/
-# broadcast/VeLaunchpad.s.sol/11155111/*
-# !broadcast/VeLaunchpad.s.sol/11155111/run-latest.json
+broadcast/VeLaunchpad.s.sol/*
+!broadcast/VeLaunchpad.s.sol/11155111/
+broadcast/VeLaunchpad.s.sol/11155111/*
+!broadcast/VeLaunchpad.s.sol/11155111/run-latest.json
 
 .vscode/
